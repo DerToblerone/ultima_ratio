@@ -1,6 +1,7 @@
 #ifndef PLAY_H
 #define PLAY_H
 
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <array>
@@ -69,6 +70,20 @@ void start_game(){
             else std::cout << "No move to undo!" << std::endl;
         }
         else if(move_string == "1") move_made = true;
+        else if(move_string == "save"){
+            // Save the moves that have been played to text file
+            std::ofstream out_stream;
+
+            out_stream.open("game.txt");
+            for(auto obj : undo_stack){
+                if(obj.move){
+                    out_stream  << square_names[from_square(obj.move)] 
+                                << square_names[to_square(obj.move)]
+                                << std::endl;
+                }
+            }
+            out_stream.close();
+        }
         else{
             player_move = parse_input_move(move_string);
         }

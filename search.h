@@ -236,7 +236,7 @@ int search(int alpha, int beta, int depth){
     Move best_move = 0;
 
 
-    bool no_moves_played = true;
+    short moves_played = 0;
 
     UndoObject undo;
 
@@ -262,7 +262,7 @@ int search(int alpha, int beta, int depth){
 
         unmake_move(pos, undo);
 
-        no_moves_played = false;
+        moves_played++;
 
         // If a score surpasses alpha, a new best move is found.
         if(score > alpha){
@@ -291,10 +291,11 @@ int search(int alpha, int beta, int depth){
         move = move_picker.pick_next_move();
 
     }
-    if(no_moves_played){
+    if(moves_played == 0){
         if(get_checkers(pos.to_move, pos)) return -(checkmate_score + depth);
         return stalemate_score;
     }
+    // TODO: ONLY POSSIBLE MOVE FLAG, then play move instantly
 
     store_entry(pos.position_key, best_move, alpha, flag, depth);
     return alpha;

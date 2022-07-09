@@ -59,7 +59,7 @@ void print_position(const Position& pos){
 
         
         std::cout << "|";
-        if(j == 6) std::cout << "  Castling Rights: " << std::bitset<8>(pos.castling_rights);
+        if(j == 6) std::cout << "  Castling Rights: " << castle_rights_str(pos);
         if(j == 5) std::cout << "  Key: " << std::hex << pos.position_key << std::dec;
         if(j == 4) std::cout <<  (pos.to_move ? "  Black" : "  White") << " to move"  << std::dec;
         if((j == 3) && pos.en_passant) std::cout << "  En passant square: " << square_names[pos.en_passant];
@@ -69,6 +69,7 @@ void print_position(const Position& pos){
     }
     std::cout << "  |=================|" << std::endl;
     std::cout << "    A B C D E F G H  " << std::endl;
+    std::cout << "FEN: " << output_fen(pos) << std::endl;
 }
 
 

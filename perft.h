@@ -63,9 +63,12 @@ unsigned long long do_perft(int depth, Position& pos){
     Bitboard checkers = get_checkers(pos.to_move, pos);
 
     
+    /*
     generate_captures(pos.to_move, pos, &move_list);
     generate_quiet(pos.to_move, pos, &move_list);
-    
+    */
+    generate_all(pos.to_move, pos, &move_list);
+
     // generate_captures_legal(pos.to_move, pos, &move_list);
     // generate_quiet(pos.to_move, pos, &move_list);
 

@@ -2,6 +2,7 @@
 #define TEST_H
 
 #include <chrono>
+#include <string>
 #include <fstream>
 #include <iostream>
 #include <regex>
@@ -25,8 +26,11 @@ void start_test(){
     std::getline(std::cin, filepath);
 
     in_stream.open(filepath);
-    
+
     int n = 8;
+
+    std::string solved_list = "";
+    
 
     std::string test_position;
 
@@ -103,12 +107,16 @@ void start_test(){
             std::cout << "Engine move: " << engine_move << " Time: " << duration.count() << std::endl;
             
             if(move_count){
+                // If there are several best moves, check for any of them if it was the engine move
                 std::string temp = "";
                 for(auto c : move){
                     switch (c)
                     {
                     case ' ':
-                        if(engine_move == temp) solved++;
+                        if(engine_move == temp){
+                            solved_list += additional_info + "\n";
+                            solved++;
+                        }
                         temp = "";
                         break;
                     
@@ -117,9 +125,15 @@ void start_test(){
                         break;
                     }
                 }
-                if(engine_move == temp) solved++;
+                if(engine_move == temp){
+                    solved_list += additional_info + "\n"; 
+                    solved++;
+                }
             }
-            else if(engine_move == move) solved++;
+            else if(engine_move == move){
+                solved_list += additional_info + "\n";
+                solved++;
+            } 
             total_duration += duration.count();
         }
 
@@ -128,6 +142,15 @@ void start_test(){
     std::cout << "Searched until ply " << n << std::endl;
     std::cout << "Solved " << solved << "/" << total << std::endl;
     std::cout << "Total time: " << total_duration/1000.0f << std::endl;
+
+    // Save a list of completed positions
+    std::ofstream out_stream;
+
+    out_stream.open("output.txt");
+    out_stream << solved_list;
+
+    in_stream.close();
+    out_stream.close();
         
 }
 

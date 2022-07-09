@@ -237,10 +237,10 @@ void generate_quiet(uint8_t color, const Position& pos, MoveList* move_list){
     
     // Queen Moves get generated in at the same time.
     bishop_moves(pos.piece_bitboards[bishop + color]| pos.piece_bitboards[queen + color], 
-                free_squares, ~pos.piece_bitboards[no_piece], move_list);
+                free_squares, ~free_squares, move_list);
     
     rook_moves(pos.piece_bitboards[rook + color] | pos.piece_bitboards[queen + color], 
-                free_squares, ~pos.piece_bitboards[no_piece], move_list);
+                free_squares, ~free_squares, move_list);
     
     if(color){ // Black
         pawn_quiet_black(pos.piece_bitboards[b_pawn], free_squares, move_list);
@@ -270,6 +270,7 @@ void generate_quiet(uint8_t color, const Position& pos, MoveList* move_list){
     }
     else{ // White
         pawn_quiet_white(pos.piece_bitboards[w_pawn], free_squares, move_list);
+        
         if(pos.castling_rights&(cstl_w)){ 
             //If castling is still possible, generate attacked squares
             Bitboard attacked_sq = attacked_squares(black, pos);
@@ -340,5 +341,97 @@ void generate_captures(uint8_t color, const Position& pos, MoveList* move_list){
 
 }
 
+void generate_all(uint8_t color, const Position& pos, MoveList* move_list){
+    Bitboard targets = pos.piece_bitboards[w_piece + (color == white)];
+    Bitboard free_squares = pos.piece_bitboards[no_piece];
+    Bitboard possible_square = targets | free_squares;
+
+    knight_moves(pos.piece_bitboards[knight + color], possible_square, move_list);
+
+    king_moves(pos.piece_bitboards[king + color], possible_square, move_list);
+    
+    bishop_moves(pos.piece_bitboards[bishop + color]| pos.piece_bitboards[queen + color], 
+                targets, possible_square, move_list);
+    
+    rook_moves(pos.piece_bitboards[rook + color] | pos.piece_bitboards[queen + color], 
+                targets, possible_square, move_list);
+
+    if(color){ // Black
+        pawn_captures_black(pos.piece_bitboards[b_pawn], targets, move_list);
+        // Handle en passant
+        if(pos.en_passant){
+            if((pos.en_passant != 16) && (pos.board[pos.en_passant + 7] == b_pawn)){
+                move_list->move_stack[move_list->size++] 
+                = (pos.en_passant + 7) + (pos.en_passant << 6) + 0x2000;
+            }
+            if((pos.en_passant != 23) && (pos.board[pos.en_passant + 9] == b_pawn)){
+                move_list->move_stack[move_list->size++] 
+                = (pos.en_passant + 9) + (pos.en_passant << 6) + 0x2000;
+            }
+        }
+        pawn_quiet_black(pos.piece_bitboards[b_pawn], free_squares, move_list);
+
+        if(pos.castling_rights&(cstl_b)){ 
+            //If castling is still possible, generate attacked squares
+            Bitboard attacked_sq = attacked_squares(white, pos);
+
+            if(pos.castling_rights&cstl_q){ 
+                // Now first check if there is a possibility for queenside castle
+                if(!((~pos.piece_bitboards[no_piece])&cstl_squares_q)){ // In between squares must be free
+                    if(!(cstl_traverse_q&attacked_sq)){ // The squares that the king needs to pass must not be attacked
+                        move_list->move_stack[move_list->size++] = cstl_move_q;
+                    }
+                    
+                }
+            }
+            if(pos.castling_rights&cstl_k){ 
+                if(!((~pos.piece_bitboards[no_piece])&cstl_squares_k)){
+                    if(!(cstl_traverse_k&attacked_sq)){
+                        move_list->move_stack[move_list->size++] = cstl_move_k;
+                    }
+                }
+            }
+        }
+    }
+    else{ // White
+        pawn_captures_white(pos.piece_bitboards[w_pawn], targets, move_list);
+        // Handle en passant
+        if(pos.en_passant){
+            if((pos.en_passant != 47) && (pos.board[pos.en_passant - 7] == w_pawn)){
+                move_list->move_stack[move_list->size++] 
+                = (pos.en_passant - 7) + (pos.en_passant << 6) + 0x2000;
+            }
+            if((pos.en_passant != 40) && (pos.board[pos.en_passant - 9] == w_pawn)){
+                move_list->move_stack[move_list->size++] 
+                = (pos.en_passant - 9) + (pos.en_passant << 6) + 0x2000;
+            }
+        }
+
+        pawn_quiet_white(pos.piece_bitboards[w_pawn], free_squares, move_list);
+        
+        if(pos.castling_rights&(cstl_w)){ 
+            //If castling is still possible, generate attacked squares
+            Bitboard attacked_sq = attacked_squares(black, pos);
+
+            if(pos.castling_rights&cstl_Q){ 
+                // Now first check if there is a possibility for queenside castle
+                if(!((~pos.piece_bitboards[no_piece])&cstl_squares_Q)){ // In between squares must be free
+                    if(!(cstl_traverse_Q&attacked_sq)){ // The squares that the king needs to pass must not be attacked
+                        move_list->move_stack[move_list->size++] = cstl_move_Q;
+                    }
+                    
+                }
+            }
+            if(pos.castling_rights&cstl_K){ 
+                if(!((~pos.piece_bitboards[no_piece])&cstl_squares_K)){
+                    if(!(cstl_traverse_K&attacked_sq)){
+                        move_list->move_stack[move_list->size++] = cstl_move_K;
+                    }
+                }
+            }
+        }
+
+    }
+}
 
 #endif //MOVEGEN

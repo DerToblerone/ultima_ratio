@@ -4,6 +4,7 @@
 #include <array>
 #include <stdint.h>
 #include <string>
+#include <cassert>
 
 #include "types.h"
 #include "utility.h"
@@ -167,49 +168,51 @@ bool Position::is_pseudolegal(Move move){
     }
 
     if(col != to_move) return false;
-    // else if((board[to] == w_king) || (board[to] == b_king)) return false;
+    // else if((board[to] == w_king) || (board[to] == b_king)) return false; MADE NO DIFFERENCE
     else{
         switch (pce - col)
         {
             
         case king:
             if  (king_attacks[from]
-                &(~piece_bitboards[col ? b_piece : w_piece])
-                &(1ULL << to)) return true; 
+                &((~piece_bitboards[col ? b_piece : w_piece])
+                &(1ULL << to))) return true; 
             break;
 
 
         case knight:
             if  (knight_attacks[from]
-                &(~piece_bitboards[col ? b_piece : w_piece])
-                &(1ULL << to)) return true; 
+                &((~piece_bitboards[col ? b_piece : w_piece])
+                &(1ULL << to))) return true; 
             break;
         
         case bishop:
+            assert((board[to] != w_king) && (board[to] != b_king));
             if( get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
-                &(~piece_bitboards[col ? b_piece : w_piece])
-                &(1ULL << to)) return true;
+                &((~piece_bitboards[col ? b_piece : w_piece])
+                &(1ULL << to))) return true;
             break;
         
         case rook:
+            assert((board[to] != w_king) && (board[to] != b_king));
             if( get_rook_attack_BB(from, ~piece_bitboards[no_piece])
-                &(~piece_bitboards[col ? b_piece : w_piece])
-                &(1ULL << to)) return true;
+                &((~piece_bitboards[col ? b_piece : w_piece])
+                &(1ULL << to))) return true;
             break;
 
         case queen:
+            assert((board[to] != w_king) && (board[to] != b_king));
             if( (
                 get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
                 |get_rook_attack_BB(from, ~piece_bitboards[no_piece])
                 )
-                &(~piece_bitboards[col ? b_piece : w_piece])
-                &(1ULL << to)) return true;
+                &((~piece_bitboards[col ? b_piece : w_piece])
+                &(1ULL << to))) return true;
             break;
 
         
         case pawn:
             if(col){
-                
                 switch (from - to)
                 {
                     case 8:
@@ -289,6 +292,16 @@ bool Position::is_pseudolegal(Move move){
     return false;
 }
 
+std::string castle_rights_str(const Position& pos){
+    std::string output = "";
+    if(pos.castling_rights&0b1) output += 'K';
+    if(pos.castling_rights&0b10) output += 'Q';
+    if(pos.castling_rights&0b100) output += 'k';
+    if(pos.castling_rights&0b1000) output += 'q';
+
+    if(output.length() < 1) return "-";
+    return output;
+}
 
 std::string read_from_fen(std::string fen, Position& pos){
     int     square_id = 0,
@@ -488,7 +501,42 @@ std::string read_from_fen(std::string fen, Position& pos){
     return remaining_string;
 }
 
+std::string output_fen(const Position& pos){
+    std::string piece_str = " PNBRQKpnbrqk";
+    std::string numbers = "012345678";
+    std::string output = "";
+    Piece current_piece;
 
+    int empty_count = 0;
+    for(int rank = 7; rank >= 0; rank--){
+        empty_count = 0;
+        for(int file = 0; file < 8; file ++){
+            current_piece = pos.board[file + 8*rank];
+            if(current_piece){
+                if(empty_count){
+                    output += numbers[empty_count];
+                    empty_count = 0;
+                }
+                output += piece_str[current_piece];
+            }
+            else{
+                empty_count++;
+            }
+        }
+
+        if(empty_count) output += numbers[empty_count];
+        if(rank)        output += "/";
+    }
+    if(pos.to_move) output += " b ";
+    else            output += " w ";
+
+    output += castle_rights_str(pos);
+    output += ' ';
+    if(pos.en_passant)  output += square_names[pos.en_passant];
+    else                output += '-';
+
+    return output;
+}
 
 // INFORMATION BITBOARDS
 inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
