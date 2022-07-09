@@ -1,0 +1,9 @@
+.*
+!/.gitignore
+
+/binaries
+/Backups
+/best_yet
+/notes
+/OLD
+makefile

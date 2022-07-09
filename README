@@ -1,0 +1,68 @@
+Chess Programm: Movegen
+
+bitboard.h:
+	Methods for generating different move and attack bitboards. 
+
+display.h:
+	Display functions for bitboards and positions.
+	
+main.cpp:
+	Main function that calls the search or perft and handles I/O.
+
+make_unmake.cpp
+	make_move(Position, Move):
+		plays the pseudolegal Move in the given Position. 
+		returns UndoObject containing undo information
+	
+	unmake_move(Position, UndoObject)
+		takes the UndoObject and reconstructs the Position before the Move.
+	
+movegen.h
+	For each piece type:
+	
+	piece_moves(Bitboards pieces, targets, (blockers,) MoveList):
+		Takes pieces and targets Bitboards and a MoveList
+		For each piece in pieces,
+			moves = pseudolegal moves of piece considering targets (and blockers)
+			add moves to MoveList
+		
+	for pawns there are quiet and capture moves seperately for each side.
+	
+	generate_quiet and generate_captures 
+		Take a Position, a side to move as uint8_t and a MoveList.
+		Generate quiet or capture moves to the list.
+		
+perft.h
+	start_perft handles perft I/O and timing, calls do_perft.
+	
+	do_perft is ther top node of the perft, calls perft.
+	
+	perft calls itself and counts.
+	
+position.h
+	Holds the Position class and a method to read a FEN string.
+	
+types.h
+	Holds Macros and Typedefs.
+	
+	Macros:
+	Holds a macro for the maximum number of moves in a movelist
+	Macros for parsing castling rights, 
+	Macros for some bitboards for castling
+	Macros fot the castling moves
+	
+	Types:
+	Integer types: Bitboard, Move = Score, Square
+	Names for integers to make Code more readable
+	Some Enums for Piece Type, Color, Bitboards and
+	square names.
+	
+	structs for the MoveList and UndoObject
+	struct for search result.
+	
+utility.h
+	Some Macros for the rows and files, as well as promotion.
+	
+	wrapper functions for builtin popcount and find least significant bit.
+	
+	
