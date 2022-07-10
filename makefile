@@ -1,2 +1,2 @@
-main: position.h bitboard.h types.h display.h main.cpp utility.h movegen.h perft.h search.h test.h table.h
-	g++ -g -o  main position.h bitboard.h types.h display.h main.cpp test.h utility.h table.h movegen.h perft.h search.h -Ofast -fconstexpr-ops-limit=335544320 -march=native -flto -fno-signed-zeros -frename-registers -funroll-loops
+urv2xp: main.cpp
+	g++ main.cpp -o urv2xp -fconstexpr-ops-limit=100000000000 -std=c++23 -Ofast -march=native -flto -fno-signed-zeros -frename-registers -funroll-loops
