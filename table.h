@@ -15,6 +15,7 @@ constexpr short tbl_shift = 64 - tbl_idx_len;
 constexpr unsigned long tbl_size = 1UL << (tbl_idx_len + 1);
 
 // Bitmask for the validation portion of the key
+// MADE SMALLER FOR DEBUG
 constexpr uint16_t v_mask = 0xFFFF; 
 
 static std::array<TableEntry, tbl_size> transp_table;

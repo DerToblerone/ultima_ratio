@@ -12,7 +12,7 @@
 #include "bitboard.h"
 #include "utility.h"
 
-std::string resolve_ambigous(Square from, Square to, PieceType type, const Position& pos);
+std::string resolve_ambigous(Square from, Square to, PieceType p_type, const Position& pos);
 std::string convert_to_algebraic(Move move, Position& pos, bool check_sign);
 
 void start_test(){
@@ -28,6 +28,8 @@ void start_test(){
     in_stream.open(filepath);
 
     int n = 8;
+    std::cout << "Test depth: " << std::endl;
+    std::cin >> n;
 
     std::string solved_list = "";
     
@@ -174,7 +176,7 @@ std::string convert_to_algebraic(Move move, Position& pos, bool check_sign){
     else if(move == cstl_move_k) return "O-O";
     else if(move == cstl_move_q) return "O-O-O";
 
-    switch (pos.board[from] - pos.to_move)
+    switch (pos.board[from] & type_mask)
     {
     case pawn: // Pawn move
         if(capture) result += files[from%8];
@@ -246,14 +248,14 @@ std::string convert_to_algebraic(Move move, Position& pos, bool check_sign){
     return result;
 }
 
-std::string resolve_ambigous(Square from, Square to, PieceType type, const Position& pos){
+std::string resolve_ambigous(Square from, Square to, PieceType p_type, const Position& pos){
     std::string result;
 
     std::string file_labels = "abcdefgh";
     std::string rank_labels = "12345678";
 
     Bitboard target = 1ULL << to;
-    Bitboard possible_attackers = pos.piece_bitboards[type + pos.to_move];
+    Bitboard possible_attackers = pos.piece_bitboards[p_type | pos.to_move];
     Bitboard ambig_pieces = 0ULL;
 
     while(possible_attackers){
@@ -262,16 +264,16 @@ std::string resolve_ambigous(Square from, Square to, PieceType type, const Posit
 
         if(sq == from) continue;
 
-        if((type == knight) && (knight_attacks[sq]&target)){
+        if((p_type == knight) && (knight_attacks[sq]&target)){
             ambig_pieces |= 1ULL << sq;
         }
-        else if((type == bishop) && (get_bishop_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target)){
+        else if((p_type == bishop) && (get_bishop_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target)){
             ambig_pieces |= 1ULL << sq; // Bishop ambiguity can only happen after promotion 
         }
-        else if((type == rook) && (get_rook_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target)){
+        else if((p_type == rook) && (get_rook_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target)){
             ambig_pieces |= 1ULL << sq;
         }
-        else if((type == queen) && ((get_rook_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target) ||
+        else if((p_type == queen) && ((get_rook_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target) ||
                                     (get_bishop_attack_BB(sq, ~pos.piece_bitboards[no_piece])&target)) ){
             ambig_pieces |= 1ULL << sq;
         }

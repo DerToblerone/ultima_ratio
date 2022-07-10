@@ -10,7 +10,7 @@
 #include "position.h"
 #include "make_unmake.cpp"
 
-unsigned long long do_perft(int depth, Position& pos);
+unsigned long long do_perft(int depth, Position& pos, bool divide);
 unsigned long long perft(int depth, Position& pos);
 
 
@@ -18,6 +18,7 @@ int start_perft(){
 
     Position pos;
     std::string fen_str;
+    std::string options;
 
     std::cout << "Position FEN (0 for initial position): " << std::endl;
     std::getline(std::cin, fen_str);
@@ -25,7 +26,7 @@ int start_perft(){
         read_from_fen(fen_str, pos);
         }
     else{
-        read_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ", pos);
+        options = read_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ", pos);
     }
         
     print_position(pos);
@@ -34,10 +35,14 @@ int start_perft(){
     std::cout << "Perft depth: " << std::endl;
     std::cin >> n;
     
-    print_position(pos);
+
+    bool divide = false;
+    if(options == "divide"){
+        divide = true;
+    }
 
     auto start = std::chrono::high_resolution_clock::now();
-    unsigned long long total = do_perft(n, pos);
+    unsigned long long total = do_perft(n, pos, divide);
     auto stop = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
@@ -56,7 +61,7 @@ int start_perft(){
 }
 
 
-unsigned long long do_perft(int depth, Position& pos){
+unsigned long long do_perft(int depth, Position& pos, bool divide){
 
     MoveList move_list;
     
@@ -64,10 +69,11 @@ unsigned long long do_perft(int depth, Position& pos){
 
     
     /*
-    generate_captures(pos.to_move, pos, &move_list);
-    generate_quiet(pos.to_move, pos, &move_list);
+    generate_captures(pos, &move_list);
+    generate_quiet(pos, &move_list);
     */
-    generate_all(pos.to_move, pos, &move_list);
+
+    generate_all(pos, &move_list);
 
     // generate_captures_legal(pos.to_move, pos, &move_list);
     // generate_quiet(pos.to_move, pos, &move_list);
@@ -85,18 +91,21 @@ unsigned long long do_perft(int depth, Position& pos){
             
             count = perft(depth - 1, pos);
 
+
             unmake_move(pos, undo);
 
-            if(count) std::cout << square_names[from_square(move)] 
+            if(divide){
+                if(count) std::cout << square_names[from_square(move)] 
                                 << square_names[to_square(move)] 
                                 << ": " 
                                 << count 
                                 << std::endl;
+            }
+            
 
             total += count;
         }
     } 
-
     return total;
 
 }
@@ -111,11 +120,12 @@ unsigned long long perft(int depth, Position& pos){
     
     MoveList move_list;
 
-    generate_captures(pos.to_move, pos, &move_list);
-    generate_quiet(pos.to_move, pos, &move_list);
+    /*
+    generate_captures(pos, &move_list);
+    generate_quiet(pos, &move_list);
+    */
     
-    
-
+    generate_all(pos, &move_list);
     
     // generate_captures_legal(pos.to_move, pos, &move_list);
     // generate_quiet(pos.to_move, pos, &move_list);

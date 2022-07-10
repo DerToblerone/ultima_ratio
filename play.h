@@ -39,9 +39,9 @@ void start_game(){
     int move_count = 0;
     
     // Keeps track if the human player has played a move 
-    bool move_made;
+    bool engine_move;
 
-    std::array<UndoObject, 200> undo_stack;
+    std::array<UndoObject, 200> undo_stack = {UndoObject()};
 
     int depth;
     std::cout << "Search depth: " << std::endl;
@@ -54,10 +54,10 @@ void start_game(){
 
     while(true){
 
-        move_made = false;
+        engine_move = false;
         player_move = 0;
         std::string move_string;
-        std::cout << "Move to play (0 to reverse): " << std::endl;
+        std::cout << "Move to play (0 to reverse, 1 for computer): " << std::endl;
         std::getline(std::cin , move_string);
 
 
@@ -69,16 +69,16 @@ void start_game(){
             }
             else std::cout << "No move to undo!" << std::endl;
         }
-        else if(move_string == "1") move_made = true;
+        else if(move_string == "1") engine_move = true;
         else if(move_string == "save"){
             // Save the moves that have been played to text file
             std::ofstream out_stream;
 
             out_stream.open("game.txt");
-            for(auto obj : undo_stack){
-                if(obj.move){
-                    out_stream  << square_names[from_square(obj.move)] 
-                                << square_names[to_square(obj.move)]
+            for(int i = 0; i < move_count; i++){
+                if(undo_stack[i].move){
+                    out_stream  << square_names[from_square(undo_stack[i].move)] 
+                                << square_names[to_square(undo_stack[i].move)]
                                 << std::endl;
                 }
             }
@@ -90,8 +90,7 @@ void start_game(){
 
         if(player_move){
             MoveList all_moves;
-            generate_captures(pos.to_move, pos, &all_moves);
-            generate_quiet(pos.to_move, pos, &all_moves);
+            generate_all(pos, &all_moves);
             
             for(auto move: all_moves.move_stack){
                 if(     (from_square(move) == from_square(player_move)) 
@@ -133,13 +132,13 @@ void start_game(){
                             break;
                         }
                         print_position(pos);
-                        move_made = true;
+                        // move_made = true;
                 }
             }
         }
 
         // Do computer move
-        if(move_made){
+        if(engine_move){
             std::cout << "Computer is thinking..." << std::endl;
             computer_move = search_position(pos, depth);
 

@@ -130,11 +130,18 @@ Move search_position(Position& root_position, int max_depth){
 
     auto full_duration = std::chrono::duration_cast<std::chrono::milliseconds>(full_stop - full_start);
 
-
+    int filled_entries = 0;
+    for(auto entry : transp_table){
+        if(entry.info) filled_entries++;
+    }
     // Print final node count and total time of all iterations combined
     std::cout << "Total time: " << full_duration.count()/1000.0f << 
-                " Total nodes: " << total_nodes << std::endl;
+                " Total nodes: " << total_nodes << 
+                " Table fill status: " << filled_entries*100.0f/tbl_size << "% " <<
+                std::endl;
 
+    
+    
     return best_move;
     
 }
@@ -143,7 +150,7 @@ Move search_position(Position& root_position, int max_depth){
 inline int eval(){
     int score = 0;
     for(int sq = 0; sq < 64; sq++){
-        if(pos.board[sq] > 6) score -= piece_square_tbl[64*pos.board[sq] + sq] << 2;
+        if(pos.board[sq]&black) score -= piece_square_tbl[64*pos.board[sq] + sq] << 2;
         else score += piece_square_tbl[64*pos.board[sq] + sq] << 2;
     }
     if(pos.to_move) return -score;
@@ -153,7 +160,7 @@ inline int eval(){
 //Quiescience Search
 int qs_search(int alpha, int beta){
 
-    if(get_checkers(black - pos.to_move, pos)){
+    if(get_checkers(black ^ pos.to_move, pos)){
         // This position is illegal
         return illegal_position;
     }
@@ -216,7 +223,7 @@ int search(int alpha, int beta, int depth){
 
     if (depth == 0) return qs_search(alpha,beta);
     
-    if(get_checkers(black - pos.to_move, pos)){
+    if(get_checkers(black ^ pos.to_move, pos)){
         // This position is illegal
         return illegal_position;
     }
@@ -226,10 +233,10 @@ int search(int alpha, int beta, int depth){
     MovePicker move_picker(pos);
 
     TableEntry table_entry =  probe_table(pos.position_key);
-    if(table_entry.move != 0){
-        if(pos.is_pseudolegal(table_entry.move))
+    if(table_entry.info != 0){
+        if(pos.is_pseudolegal(table_entry.move)) {
             move_picker.add_move(table_entry.move);
-        
+        }
     }
 
     Move move = move_picker.pick_next_move();

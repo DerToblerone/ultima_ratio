@@ -15,7 +15,7 @@ enum GenerationState{
     done_state = 0
 };
 
-std::array<uint8_t, 13> victim_values ={
+std::array<uint8_t, 16> victim_values ={
         // empty just as buffer
         0,
 
@@ -29,16 +29,19 @@ std::array<uint8_t, 13> victim_values ={
         50,
         // king captures can not occur
         0,
+        0, // w piece
+        0, // dummy
         // Black
         10,
         20,
         30,
         40,
         50,
+        0,
         0
 };
 
-std::array<uint8_t, 13> attacker_values ={
+std::array<uint8_t, 16> attacker_values ={
         // empty just as buffer
         0,
 
@@ -52,12 +55,16 @@ std::array<uint8_t, 13> attacker_values ={
         1,
         // king captures can not occur
         0,
+
+        0,
+        0,
         // Black
         5,
         4,
         3,
         2,
         1,
+        0,
         0
 };
 
@@ -122,7 +129,7 @@ void MovePicker::generate_next(){
     switch (generation_state)
     {
     case capture_state:
-        generate_captures(pos.to_move, pos, &move_list);
+        generate_captures(pos, &move_list);
         generation_state = quiet_state;
 
         // Sort the captures via MVV/LVA
@@ -142,7 +149,7 @@ void MovePicker::generate_next(){
             }
 
     case quiet_state:
-        generate_quiet(pos.to_move, pos, &move_list);
+        generate_quiet(pos, &move_list);
         generation_state = done_state;
         break;
     

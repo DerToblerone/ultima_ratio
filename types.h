@@ -48,7 +48,9 @@ typedef uint64_t Bitboard;
 typedef uint16_t Move;
 typedef uint16_t Score;
 typedef uint8_t Square;
+typedef uint8_t PieceColor;
 
+constexpr uint16_t is_special_pawn_move = 0x7000;
 
 enum PieceType
 {
@@ -61,35 +63,39 @@ enum PieceType
     king = 6
 };
 
-enum PieceColor
+enum Colors
 {
-    black = 6,
+    black = 8, //1000
     white = 0,
 };
 
 // This is also the mapping of the Bitboards
+// Piece&type_mask = Piece
 enum Piece
 {
     no_piece = 0,
-
     w_pawn = 1,
     w_knight = 2,
     w_bishop = 3,
     w_rook = 4,
     w_queen = 5,
     w_king = 6,
-
-    b_pawn = 7,
-    b_knight = 8,
-    b_bishop = 9,
-    b_rook = 10,
-    b_queen = 11,
-    b_king = 12,
-
-    // Here come other indices for the tables
-    w_piece = 13,
-    b_piece = 14
+    w_piece = 7,
+    
+    dummy = 8,
+    b_pawn = 9,
+    b_knight = 10,
+    b_bishop = 11,
+    b_rook = 12,
+    b_queen = 13,
+    b_king = 14,
+    b_piece = 15
 };
+
+constexpr char num_types = 16;
+
+constexpr char color_mask = 0b1000; // 8
+constexpr char type_mask = 0b111; // 7
 
 // Square constants and strings
 

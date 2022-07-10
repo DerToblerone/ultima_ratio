@@ -1,10 +1,14 @@
 #ifndef POSITION_H
 #define POSITION_H
 
+// uncomment to disable assert()
+#define NDEBUG
+#include <cassert>
+
 #include <array>
 #include <stdint.h>
 #include <string>
-#include <cassert>
+#include <random>
 
 #include "types.h"
 #include "utility.h"
@@ -17,16 +21,17 @@
 // 4 Numbers for castling rights
 // 1 Number for side to move
 
-constexpr short random_value_count = 64*14 + 5;
+constexpr short random_value_count = 64*num_types + 5;
 
 // Give meaningful names to the offsets in the rad_value_array
 enum RandTableIndices{
-    enp_rnd_id = 64*13,
-    to_move_rnd_id = 64*14,
-    cstl_K_rnd_id = 64*14 + 1,
-    cstl_Q_rnd_id = 64*14 + 2,
-    cstl_k_rnd_id = 64*14 + 3,
-    cstl_q_rnd_id = 64*14 + 4
+    // use the dummy bitboard in the middle for en passant rnd values
+    enp_rnd_id = 64*dummy,
+    to_move_rnd_id = 64*num_types,
+    cstl_K_rnd_id = 64*num_types + 1,
+    cstl_Q_rnd_id = 64*num_types + 2,
+    cstl_k_rnd_id = 64*num_types + 3,
+    cstl_q_rnd_id = 64*num_types + 4
 };
 
 
@@ -34,12 +39,19 @@ enum RandTableIndices{
 auto rnd_value_array{[]() {
     std::array<uint64_t, random_value_count> result{};
     
-    // Set random seed to get the same hash values every time
-    srand(1234567);
-
+    
     result = {0};
     
     // TODO: MAKE RANDOMNESS BETTER
+    std::mt19937_64 gen_64;
+
+    for (int i = 64; i < random_value_count; i++)
+    {
+        result[i] = gen_64();
+    }
+    /*
+    // Set random seed to get the same hash values every time
+    srand(1234567);
 
     // Fill up the array with random values, but we start at 64
     // since the empty squares will not influence the hash, thus
@@ -51,7 +63,7 @@ auto rnd_value_array{[]() {
                     ^ ((uint64_t)rand() << 30) 
                     ^ ((uint64_t)rand() << 45) 
                     ^ ((uint64_t)rand() << 60);
-    }
+    }*/
     return result;
 }()};
 
@@ -67,6 +79,9 @@ class Position{
             piece_bitboards[w_bishop]   = 0x0000000000000024ULL;
             piece_bitboards[w_rook]     = 0x0000000000000081ULL;
             piece_bitboards[w_queen]    = 0x0000000000000008ULL;
+            piece_bitboards[w_piece]    = 0x000000000000FFFFULL;
+
+            piece_bitboards[dummy]      = 0x0ULL;
 
             piece_bitboards[b_pawn]     = __7_RANK;
             piece_bitboards[b_knight]   = 0x4200000000000000ULL;
@@ -74,8 +89,6 @@ class Position{
             piece_bitboards[b_bishop]   = 0x2400000000000000ULL;
             piece_bitboards[b_rook]     = 0x8100000000000000ULL;
             piece_bitboards[b_queen]    = 0x0800000000000000ULL;
-            
-            piece_bitboards[w_piece]    = 0x000000000000FFFFULL;
             piece_bitboards[b_piece]    = 0xFFFF000000000000ULL;
 
             en_passant = 0;
@@ -107,7 +120,7 @@ class Position{
         enums that index the bitboards represent pieces in the pos_board
 
         */
-        std::array<Bitboard, 15> piece_bitboards;
+        std::array<Bitboard, 16> piece_bitboards;
 
         std::array<Piece, 64> board;
 
@@ -131,7 +144,8 @@ void Position::init_position_key(){
     this->position_key = 0ULL;
 
     // First hash in the Piece Bitboards and empty squares
-    for(int index; index < 13; index++){
+    for(int index; index < num_types; index++){
+        if((index == w_piece) || (index == b_piece)) continue;
         pieces = this->piece_bitboards[index];
         while(pieces){
             sq = get_lsb(pieces) - 1;
@@ -160,59 +174,71 @@ bool Position::is_pseudolegal(Move move){
     Piece pce = board[from];
     PieceColor col;
 
-    if(pce==0){
+
+    assert((0 <= from) && (from < 64));
+    assert((0 <= to) && (to < 64));
+    assert(pce != w_piece);
+    assert(pce != b_piece);
+
+    if(!(move)) return false;
+
+    // If a piece is present, assign color
+    if(pce){
+        col = pce & color_mask;
+    }
+    else{
+        // No piece on from square, no move
         return false;
     }
-    else{
-        col = (pce < 6) ? white : black;
-    }
 
-    if(col != to_move) return false;
+    if((move&is_special_pawn_move) && ((pce&type_mask) != pawn)) return false;
+    else if(move&0x8000) return false; // No castling moves yet
+
+    if(col ^ to_move) return false;
     // else if((board[to] == w_king) || (board[to] == b_king)) return false; MADE NO DIFFERENCE
     else{
-        switch (pce - col)
+        switch (pce & type_mask)
         {
             
         case king:
             if  (king_attacks[from]
-                &((~piece_bitboards[col ? b_piece : w_piece])
+                &((~piece_bitboards[col | w_piece])
                 &(1ULL << to))) return true; 
             break;
 
 
         case knight:
             if  (knight_attacks[from]
-                &((~piece_bitboards[col ? b_piece : w_piece])
+                &((~piece_bitboards[col | w_piece])
                 &(1ULL << to))) return true; 
             break;
         
         case bishop:
-            assert((board[to] != w_king) && (board[to] != b_king));
             if( get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
-                &((~piece_bitboards[col ? b_piece : w_piece])
+                &((~piece_bitboards[col | w_piece])
                 &(1ULL << to))) return true;
             break;
         
         case rook:
-            assert((board[to] != w_king) && (board[to] != b_king));
             if( get_rook_attack_BB(from, ~piece_bitboards[no_piece])
-                &((~piece_bitboards[col ? b_piece : w_piece])
+                &((~piece_bitboards[col | w_piece])
                 &(1ULL << to))) return true;
             break;
 
         case queen:
-            assert((board[to] != w_king) && (board[to] != b_king));
             if( (
                 get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
-                |get_rook_attack_BB(from, ~piece_bitboards[no_piece])
+                |
+                get_rook_attack_BB(from, ~piece_bitboards[no_piece])
                 )
-                &((~piece_bitboards[col ? b_piece : w_piece])
+                &((~piece_bitboards[col | w_piece])
                 &(1ULL << to))) return true;
             break;
 
         
         case pawn:
             if(col){
+                // Black
                 switch (from - to)
                 {
                     case 8:
@@ -226,7 +252,7 @@ bool Position::is_pseudolegal(Move move){
                         // move generator to produce this move so it does not need to be checked
                         if((to&0b111) == 7) return false;
                         if(!board[to]) return false;
-                        if(board[to] <= 6) return true;
+                        if((board[to] & color_mask) == white) return true;
                         else if(en_passant == to) return true;
                         break;
 
@@ -234,7 +260,7 @@ bool Position::is_pseudolegal(Move move){
                         // capture left
                         if((to&0b111) == 0) return false;
                         if(!board[to]) return false;
-                        if(board[to] <= 6) return true;
+                        if((board[to] & color_mask) == white) return true;
                         else if(en_passant == to) return true;
                         break;
 
@@ -248,7 +274,8 @@ bool Position::is_pseudolegal(Move move){
                 }
             }
             else{
-                //First calculate the difference between from and two square
+                // White
+                // First calculate the difference between from and two square
                 switch (to - from)
                 {
                     case 8:
@@ -261,14 +288,14 @@ bool Position::is_pseudolegal(Move move){
                         // Note that the illegal pawn move a2h1 would not be filtered. But it is impossible for the
                         // move generator to produce this move so it does not need to be checked
                         if((to&0b111) == 7) return false;
-                        if(board[to] > 6) return true;
+                        if(board[to] & black) return true;
                         else if(en_passant == to) return true;
                         break;
 
                     case 7:
                         // capture left
                         if((to&0b111) == 0) return false;
-                        if(board[to] > 6) return true;
+                        if(board[to] & black) return true;
                         else if(en_passant == to) return true;
                         break;
 
@@ -502,7 +529,7 @@ std::string read_from_fen(std::string fen, Position& pos){
 }
 
 std::string output_fen(const Position& pos){
-    std::string piece_str = " PNBRQKpnbrqk";
+    std::string piece_str = " PNBRQK  pnbrqk ";
     std::string numbers = "012345678";
     std::string output = "";
     Piece current_piece;
@@ -510,7 +537,7 @@ std::string output_fen(const Position& pos){
     int empty_count = 0;
     for(int rank = 7; rank >= 0; rank--){
         empty_count = 0;
-        for(int file = 0; file < 8; file ++){
+        for(int file = 0; file < 8; file++){
             current_piece = pos.board[file + 8*rank];
             if(current_piece){
                 if(empty_count){
@@ -539,10 +566,11 @@ std::string output_fen(const Position& pos){
 }
 
 // INFORMATION BITBOARDS
+// Returns squares attacked by this color
 inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
-    // Returns squares attacked by this color
+    
     Bitboard attacked_sq = 0ULL;
-    Bitboard pieces = pos.piece_bitboards[knight + color];
+    Bitboard pieces = pos.piece_bitboards[knight | color];
     Square sq = 0;
 
 
@@ -553,7 +581,7 @@ inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
         attacked_sq |= knight_attacks[sq];
     }
 
-    pieces = pos.piece_bitboards[king + color];
+    pieces = pos.piece_bitboards[king | color];
     sq = 0;
 
     while(pieces){
@@ -563,7 +591,7 @@ inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
         attacked_sq |= king_attacks[sq];
     }
 
-    pieces = pos.piece_bitboards[bishop + color]|pos.piece_bitboards[queen + color];
+    pieces = pos.piece_bitboards[bishop | color]|pos.piece_bitboards[queen | color];
     sq = 0;
 
     while(pieces){
@@ -573,7 +601,7 @@ inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
         attacked_sq |= get_bishop_attack_BB(sq, ~pos.piece_bitboards[no_piece]);
     }
 
-    pieces = pos.piece_bitboards[rook + color]|pos.piece_bitboards[queen + color];
+    pieces = pos.piece_bitboards[rook | color]|pos.piece_bitboards[queen | color];
     sq = 0;
 
     while(pieces){
@@ -598,23 +626,24 @@ inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
     return attacked_sq;
 }
 
+// Returns a bitboard of all pieces of the enemy color attacking the king (the checkers)
 inline Bitboard get_checkers(uint_fast8_t color, const Position& pos){
-    // Returns a bitboard of all pieces of the enemy color attacking the king (the checkers)
+    
 
     // Checks if the king is under attack
-    Square king_square = get_lsb(pos.piece_bitboards[king + color]) - 1;
+    Square king_square = get_lsb(pos.piece_bitboards[king | color]) - 1;
 
 
-    Bitboard attackers = knight_attacks[king_square]&pos.piece_bitboards[b_knight - color];
+    Bitboard attackers = knight_attacks[king_square]&pos.piece_bitboards[b_knight ^ color];
 
     //king 
-    attackers |= king_attacks[king_square]&pos.piece_bitboards[b_king - color];
+    attackers |= king_attacks[king_square]&pos.piece_bitboards[b_king ^ color];
 
     attackers |= get_bishop_attack_BB(king_square, ~pos.piece_bitboards[no_piece])&
-                                    (pos.piece_bitboards[b_bishop - color]|pos.piece_bitboards[b_queen - color]);
+                                    (pos.piece_bitboards[b_bishop ^ color]|pos.piece_bitboards[b_queen ^ color]);
 
     attackers |= get_rook_attack_BB(king_square, ~pos.piece_bitboards[no_piece])&
-                                    (pos.piece_bitboards[b_rook - color]|pos.piece_bitboards[b_queen - color]);
+                                    (pos.piece_bitboards[b_rook ^ color]|pos.piece_bitboards[b_queen ^ color]);
     
     // Now check if there are pawn attacks:
     if(color){ 
@@ -653,18 +682,18 @@ inline Bitboard attacked_by(uint_fast8_t color, Bitboard squares, const Position
         sq = get_lsb(squares_to_check) - 1;
 
         attackers |= get_bishop_attack_BB(sq, ~pos.piece_bitboards[no_piece])&
-                     (pos.piece_bitboards[w_bishop + color]|pos.piece_bitboards[w_queen + color]);
+                     (pos.piece_bitboards[w_bishop | color]|pos.piece_bitboards[w_queen | color]);
 
         if(attackers&squares) return true;
 
         attackers |= get_rook_attack_BB(sq, ~pos.piece_bitboards[no_piece])&
-                     (pos.piece_bitboards[w_rook + color]|pos.piece_bitboards[w_queen + color]);
+                     (pos.piece_bitboards[w_rook | color]|pos.piece_bitboards[w_queen | color]);
                      
         if(attackers&squares) return true;
 
-        attackers |= knight_attacks[sq]&pos.piece_bitboards[w_knight + color];
+        attackers |= knight_attacks[sq]&pos.piece_bitboards[w_knight | color];
 
-        attackers |= king_attacks[sq]&pos.piece_bitboards[w_king + color];
+        attackers |= king_attacks[sq]&pos.piece_bitboards[w_king | color];
 
         if(attackers&squares) return true;
 

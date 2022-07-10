@@ -176,11 +176,11 @@ UndoObject make_move(Position& pos, Move move){
     pos.piece_bitboards[no_piece] ^= (1ULL << from);
 
     // Occupancy bitboards need updating
-    pos.piece_bitboards[w_piece + (pos.to_move != white)] ^= (1ULL << from) | (1ULL << to);
+    pos.piece_bitboards[w_piece | pos.to_move] ^= (1ULL << from) | (1ULL << to);
 
     // If there was a piece captured, change the opposing colors occpuancy
     if(target){
-        pos.piece_bitboards[w_piece + (pos.to_move == white)] ^= (1ULL << to);
+        pos.piece_bitboards[b_piece ^ pos.to_move] ^= (1ULL << to);
     }
 
     // Update Castling rights
@@ -195,7 +195,7 @@ UndoObject make_move(Position& pos, Move move){
                         ^ rnd_value_array[64*moved + to]
                         ^ rnd_value_array[64*target + to];
 
-    if(undo.castling_rights != pos.castling_rights){
+    if(undo.castling_rights ^ pos.castling_rights){
         // Remove castling rights from hash if they are different
         uint8_t cstl_difference = undo.castling_rights^pos.castling_rights;
         while(cstl_difference){
@@ -312,11 +312,11 @@ void unmake_move(Position& pos, const UndoObject& undo){
     pos.piece_bitboards[no_piece] ^= (1ULL << from);
 
     // After changing back the side to move, undo the occupancy changes    
-    pos.piece_bitboards[w_piece + (pos.to_move != white)] ^= (1ULL << from) | (1ULL << to);
+    pos.piece_bitboards[w_piece | pos.to_move] ^= (1ULL << from) | (1ULL << to);
 
     // If there was a piece captured, change the opposing colors occpuancy back as well
     if(undo.target_piece){
-        pos.piece_bitboards[w_piece + (pos.to_move == white)] ^= (1ULL << to);
+        pos.piece_bitboards[b_piece ^ pos.to_move] ^= (1ULL << to);
     }
 
 }
