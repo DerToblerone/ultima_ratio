@@ -218,8 +218,18 @@ struct UndoObject
     UndoObject() {};
 };
 
-constexpr uint8_t entry_flag_mask = 0xC0;
-constexpr uint8_t entry_dep_mask = 0x3F;
+// SEARCH INFO AND TT
+enum SpecialScores{
+    illegal_position =  0xFFFFFFF,
+    infinity_score =    0xFFFFFF,
+    checkmate_score =   0xFFFFF,
+    stalemate_score =   0,
+    mate_dep_margin = 200
+};
+
+
+constexpr uint8_t entry_flag_mask = 0b11000000;
+constexpr uint8_t entry_dep_mask  =   0b111111;
 
 enum EntryFlags{
     const_entry = 0xC0,
@@ -230,16 +240,16 @@ enum EntryFlags{
 };
 
 struct TableEntry{
-    uint16_t validation_key;
+    uint64_t validation_key;
     Move move;
     int32_t score;
     uint8_t info;
     // Info is structured as such
     // Top 2 bits are flags
-    // Bottom 6 bits are depth (up to 47)
+    // Bottom 6 bits are depth (up to 63)
 
     TableEntry() : validation_key(0), move(0), score(0), info(0) {}
-    TableEntry(uint16_t v_key, Move m, int32_t sc, uint8_t nfo) : 
+    TableEntry(uint64_t v_key, Move m, int32_t sc, uint8_t nfo) : 
         validation_key(v_key), move(m), score(sc), info(nfo) {}
 
 };

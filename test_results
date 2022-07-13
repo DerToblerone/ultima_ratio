@@ -77,5 +77,45 @@ Total time: 585.843
 
 
 
+// NEW TT D8
+test_data/wac.epd
+Searched until ply 8
+Solved 244/300
+Total time: 197.642
+
+test_data/ecm.epd
+Searched until ply 8
+Solved 19/216
+Total time: 339.411
+
+
+// Point lost here because it did not truly solve it before:
+1r3k2/2N2pp1/1pR2n1p/4p3/8/1P1K1P2/P5PP/8 w - - bm Kc4 , number 74
+test_data/eret.epd
+Searched until ply 8
+Solved 11/111
+Total time: 159.951
+
+
+// Point lost here:
+bm Kd5; c0 "CCC post"; id "ZPTS.03";
+8/3k4/8/8/3PK3/8/8/8 w - - bm Kd5;
+// again, because it wasnt solved truly before
+test_data/zugzwang.epd
+Searched until ply 8
+Solved 19/30
+Total time: 2.135
+
+test_data/arasan.epd
+Searched until ply 8
+Solved 9/200
+Total time: 321.16
+
+test_data/bratko-kopec.epd
+Searched until ply 8
+Solved 12/24
+Total time: 35.724
+
+
 
 

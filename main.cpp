@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <type_traits>
 
 #include "perft.h"
 #include "play.h"

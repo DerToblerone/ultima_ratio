@@ -176,4 +176,5 @@ inline bool MovePicker::mvv_lva(Move x, Move y)
         return false; 
 } 
 
+
 #endif // MOVEPICKER_H

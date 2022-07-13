@@ -20,3 +20,6 @@ history
 .gitignore
 .gitignore
 test_results
+output_zugzwang.txt
+output.txt
+test_results

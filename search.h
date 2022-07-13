@@ -18,15 +18,6 @@
 #include "position_tables.h"
 #include "table.h"
 
-enum SpecialScores{
-    illegal_position =  0xFFFFFFF,
-    infinity_score =    0xFFFFFF,
-    checkmate_score =   0xFFFFF,
-    stalemate_score =   0
-    
-};
-// Position evaluation should be roughly between
-// +1 000 000 and - 1 000 000
 
 int search(int alpha, int beta, int depth);
 void prepare_tables(const Position& position);
@@ -51,9 +42,9 @@ void display_search_result(int depth, int score, unsigned long long total_nodes,
         short mate_in = 0;
 
         if(score > 0) 
-            mate_in = (depth - (abs(score) - checkmate_score))/2;
+            mate_in = (1 + depth - (abs(score) - checkmate_score))/2;
         else
-            mate_in = (-depth + (abs(score) - checkmate_score))/2;
+            mate_in = (-(1 + depth) + (abs(score) - checkmate_score))/2;
 
         std::cout << "#" << mate_in << "  ";
     }
@@ -76,7 +67,7 @@ void display_search_result(int depth, int score, unsigned long long total_nodes,
 }
 
 
-Move search_position(Position& root_position, int max_depth){
+Move search_position(Position& root_position, int min_depth){
     int score = 0;
     Move best_move = 0;
     unsigned long total_nodes = 0;
@@ -118,12 +109,15 @@ Move search_position(Position& root_position, int max_depth){
 
         best_move = principal_variation[max_pv_len*depth];
 
-        depth++;
 
         // If a checkmate is found for the side to move, stop search and play
         if(score >= checkmate_score) done = true;
 
-        if(depth > max_depth) done = true;
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - full_start);
+        if((depth >= min_depth) && ((duration.count()/1000.0f) > 2)) done = true;
+        
+        
+        depth++;
 
     }
     auto full_stop = std::chrono::high_resolution_clock::now();
@@ -232,10 +226,33 @@ int search(int alpha, int beta, int depth){
 
     MovePicker move_picker(pos);
 
-    TableEntry table_entry =  probe_table(pos.position_key);
+    TableEntry table_entry = probe_table(pos.position_key);
     if(table_entry.info != 0){
         if(pos.is_pseudolegal(table_entry.move)) {
             move_picker.add_move(table_entry.move);
+        }
+        if((table_entry.info&entry_dep_mask) >= depth){
+            //score = table_entry.score;
+
+            switch (table_entry.info&entry_flag_mask)
+            {
+            case lower_bound:
+                if(table_entry.score >= beta) return beta;
+                break;
+            
+            case upper_bound:
+                if(table_entry.score <= alpha) return alpha;
+                break;
+
+            case exact_score:
+                if(table_entry.score >= beta) return beta;
+                else if(table_entry.score <= alpha) return alpha;
+                else return table_entry.score;
+                break;
+
+            default:
+                break;
+            }
         }
     }
 
@@ -271,12 +288,15 @@ int search(int alpha, int beta, int depth){
 
         moves_played++;
 
+
         // If a score surpasses alpha, a new best move is found.
         if(score > alpha){
 
             // If beta is exceeded as well, perform beta cutoff
             if(score >= beta){
+
                 store_entry(pos.position_key, move, score, lower_bound, depth);
+
                 return beta;
             }
 

@@ -16,7 +16,7 @@ constexpr unsigned long tbl_size = 1UL << (tbl_idx_len + 1);
 
 // Bitmask for the validation portion of the key
 // MADE SMALLER FOR DEBUG
-constexpr uint16_t v_mask = 0xFFFF; 
+constexpr int32_t v_mask = 0xFFFFFFF; 
 
 static std::array<TableEntry, tbl_size> transp_table;
 
@@ -36,7 +36,7 @@ void store_entry(uint64_t key, Move move, int score, EntryFlags flag, int depth)
     // Check if entry is marked as constant
     if((transp_table[key >> tbl_shift].info&entry_flag_mask) != const_entry){
         // If not, then overwrite with new entry
-        transp_table[key >> tbl_shift] = TableEntry(key&v_mask, move, score, flag|depth);
+        transp_table[key >> tbl_shift] = TableEntry(key/*&v_mask*/, move, score, flag|depth);
 
     }
 }
@@ -46,12 +46,12 @@ TableEntry probe_table(uint64_t key){
 
     assert((key >> tbl_shift) < tbl_size);
 
-    if(transp_table[key >> tbl_shift].validation_key == (key&v_mask)){
+    if(transp_table[key >> tbl_shift].validation_key == (key/*&v_mask*/)){
 
         return transp_table[key >> tbl_shift];
 
     }
-    return TableEntry();
+    return TableEntry(0,0,0,0);
 }
 
 

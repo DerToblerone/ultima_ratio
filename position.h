@@ -168,156 +168,6 @@ void Position::init_position_key(){
 
 }
 
-bool Position::is_pseudolegal(Move move){
-    Square from = from_square(move);
-    Square to = to_square(move);
-    Piece pce = board[from];
-    PieceColor col;
-
-
-    assert((0 <= from) && (from < 64));
-    assert((0 <= to) && (to < 64));
-    assert(pce != w_piece);
-    assert(pce != b_piece);
-
-    if(!(move)) return false;
-
-    // If a piece is present, assign color
-    if(pce){
-        col = pce & color_mask;
-    }
-    else{
-        // No piece on from square, no move
-        return false;
-    }
-
-    if((move&is_special_pawn_move) && ((pce&type_mask) != pawn)) return false;
-    else if(move&0x8000) return false; // No castling moves yet
-
-    if(col ^ to_move) return false;
-    // else if((board[to] == w_king) || (board[to] == b_king)) return false; MADE NO DIFFERENCE
-    else{
-        switch (pce & type_mask)
-        {
-            
-        case king:
-            if  (king_attacks[from]
-                &((~piece_bitboards[col | w_piece])
-                &(1ULL << to))) return true; 
-            break;
-
-
-        case knight:
-            if  (knight_attacks[from]
-                &((~piece_bitboards[col | w_piece])
-                &(1ULL << to))) return true; 
-            break;
-        
-        case bishop:
-            if( get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
-                &((~piece_bitboards[col | w_piece])
-                &(1ULL << to))) return true;
-            break;
-        
-        case rook:
-            if( get_rook_attack_BB(from, ~piece_bitboards[no_piece])
-                &((~piece_bitboards[col | w_piece])
-                &(1ULL << to))) return true;
-            break;
-
-        case queen:
-            if( (
-                get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
-                |
-                get_rook_attack_BB(from, ~piece_bitboards[no_piece])
-                )
-                &((~piece_bitboards[col | w_piece])
-                &(1ULL << to))) return true;
-            break;
-
-        
-        case pawn:
-            if(col){
-                // Black
-                switch (from - to)
-                {
-                    case 8:
-                        // straight pawn push
-                        if(!board[to]) return true;
-                        break;
-
-                    case 7:
-                        // capture right 
-                        // Note that the illegal pawn move a2h1 would not be filtered. But it is impossible for the
-                        // move generator to produce this move so it does not need to be checked
-                        if((to&0b111) == 7) return false;
-                        if(!board[to]) return false;
-                        if((board[to] & color_mask) == white) return true;
-                        else if(en_passant == to) return true;
-                        break;
-
-                    case 9:
-                        // capture left
-                        if((to&0b111) == 0) return false;
-                        if(!board[to]) return false;
-                        if((board[to] & color_mask) == white) return true;
-                        else if(en_passant == to) return true;
-                        break;
-
-                    case 16:
-                        // double push, only possible if both squares are free and the pawn is on rank 2
-                        if((!board[to]) && (!board[to + 8]) && (from > 47)) return true;
-                        break;
-                    
-                    default:
-                        break;
-                }
-            }
-            else{
-                // White
-                // First calculate the difference between from and two square
-                switch (to - from)
-                {
-                    case 8:
-                        // straight pawn push
-                        if(!board[to]) return true;
-                        break;
-
-                    case 9:
-                        // capture right 
-                        // Note that the illegal pawn move a2h1 would not be filtered. But it is impossible for the
-                        // move generator to produce this move so it does not need to be checked
-                        if((to&0b111) == 7) return false;
-                        if(board[to] & black) return true;
-                        else if(en_passant == to) return true;
-                        break;
-
-                    case 7:
-                        // capture left
-                        if((to&0b111) == 0) return false;
-                        if(board[to] & black) return true;
-                        else if(en_passant == to) return true;
-                        break;
-
-                    case 16:
-                        // double push, only possible if both squares are free and the pawn is on rank 2
-                        if((!board[to]) && (!board[to - 8]) && (from < 16)) return true;
-                        break;
-                    
-                    default:
-                        break;
-                }
-            }
-            break;
-            
-        
-        default:
-            break;
-        }
-    }
-
-    return false;
-}
 
 std::string castle_rights_str(const Position& pos){
     std::string output = "";
@@ -565,6 +415,7 @@ std::string output_fen(const Position& pos){
     return output;
 }
 
+
 // INFORMATION BITBOARDS
 // Returns squares attacked by this color
 inline Bitboard attacked_squares(uint_fast8_t color, const Position& pos){
@@ -701,6 +552,199 @@ inline Bitboard attacked_by(uint_fast8_t color, Bitboard squares, const Position
     }
     return false;
 
+}
+
+
+
+// (Pseudo) Legality check
+
+bool Position::is_pseudolegal(Move move){
+    Square from = from_square(move);
+    Square to = to_square(move);
+    Piece pce = board[from];
+    PieceColor col;
+
+
+    assert((0 <= from) && (from < 64));
+    assert((0 <= to) && (to < 64));
+    assert(pce != w_piece);
+    assert(pce != b_piece);
+
+    if(!(move)) return false;
+
+    // If a piece is present, assign color
+    if(pce){
+        col = pce & color_mask;
+    }
+    else{
+        // No piece on from square, no move
+        return false;
+    }
+
+    if((move&is_special_pawn_move) && ((pce&type_mask) != pawn)) return false;
+    else if(move&0x8000){
+        Bitboard attacked_sq = attacked_squares(col ^ black, *this);
+
+        switch (move)
+        {
+        case cstl_move_K:
+            return ((castling_rights&cstl_K) 
+                    && (!((~piece_bitboards[no_piece])&cstl_squares_K))
+                    && (!(cstl_traverse_K&attacked_sq))
+                    );
+            break;
+
+        case cstl_move_Q:
+            return ((castling_rights&cstl_Q) 
+                    && (!((~piece_bitboards[no_piece])&cstl_squares_Q))
+                    && (!(cstl_traverse_Q&attacked_sq))
+                    );
+            break;
+
+        case cstl_move_k:
+            return ((castling_rights&cstl_k) 
+                    && (!((~piece_bitboards[no_piece])&cstl_squares_k))
+                    && (!(cstl_traverse_k&attacked_sq))
+                    );
+            break;
+
+        case cstl_move_q:
+            return ((castling_rights&cstl_q) 
+                    && (!((~piece_bitboards[no_piece])&cstl_squares_q))
+                    && (!(cstl_traverse_q&attacked_sq))
+                    );
+            break;
+
+
+        default:
+            return false;
+            break;
+        }
+    } //return false;
+
+    if(col ^ to_move) return false;
+    // else if((board[to] == w_king) || (board[to] == b_king)) return false; MADE NO DIFFERENCE
+    else{
+        switch (pce & type_mask)
+        {
+            
+        case king:
+            if  (king_attacks[from]
+                &((~piece_bitboards[col | w_piece])
+                &(1ULL << to))) return true; 
+            break;
+
+
+        case knight:
+            if  (knight_attacks[from]
+                &((~piece_bitboards[col | w_piece])
+                &(1ULL << to))) return true; 
+            break;
+        
+        case bishop:
+            if( get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
+                &((~piece_bitboards[col | w_piece])
+                &(1ULL << to))) return true;
+            break;
+        
+        case rook:
+            if( get_rook_attack_BB(from, ~piece_bitboards[no_piece])
+                &((~piece_bitboards[col | w_piece])
+                &(1ULL << to))) return true;
+            break;
+
+        case queen:
+            if( (
+                get_bishop_attack_BB(from, ~piece_bitboards[no_piece])
+                |
+                get_rook_attack_BB(from, ~piece_bitboards[no_piece])
+                )
+                &((~piece_bitboards[col | w_piece])
+                &(1ULL << to))) return true;
+            break;
+
+        
+        case pawn:
+            if(col){
+                // Black
+                switch (from - to)
+                {
+                    case 8:
+                        // straight pawn push
+                        if(!board[to]) return true;
+                        break;
+
+                    case 7:
+                        // capture right 
+                        // Note that the illegal pawn move a2h1 would not be filtered. But it is impossible for the
+                        // move generator to produce this move so it does not need to be checked
+                        if((to&0b111) == 7) return false;
+                        if(!board[to]) return false;
+                        if((board[to] & color_mask) == white) return true;
+                        else if(en_passant == to) return true;
+                        break;
+
+                    case 9:
+                        // capture left
+                        if((to&0b111) == 0) return false;
+                        if(!board[to]) return false;
+                        if((board[to] & color_mask) == white) return true;
+                        else if(en_passant == to) return true;
+                        break;
+
+                    case 16:
+                        // double push, only possible if both squares are free and the pawn is on rank 2
+                        if((!board[to]) && (!board[to + 8]) && (from > 47)) return true;
+                        break;
+                    
+                    default:
+                        break;
+                }
+            }
+            else{
+                // White
+                // First calculate the difference between from and two square
+                switch (to - from)
+                {
+                    case 8:
+                        // straight pawn push
+                        if(!board[to]) return true;
+                        break;
+
+                    case 9:
+                        // capture right 
+                        // Note that the illegal pawn move a2h1 would not be filtered. But it is impossible for the
+                        // move generator to produce this move so it does not need to be checked
+                        if((to&0b111) == 7) return false;
+                        if(board[to] & black) return true;
+                        else if(en_passant == to) return true;
+                        break;
+
+                    case 7:
+                        // capture left
+                        if((to&0b111) == 0) return false;
+                        if(board[to] & black) return true;
+                        else if(en_passant == to) return true;
+                        break;
+
+                    case 16:
+                        // double push, only possible if both squares are free and the pawn is on rank 2
+                        if((!board[to]) && (!board[to - 8]) && (from < 16)) return true;
+                        break;
+                    
+                    default:
+                        break;
+                }
+            }
+            break;
+            
+        
+        default:
+            break;
+        }
+    }
+
+    return false;
 }
 
 

@@ -1,13 +1,12 @@
-bm Nf5; id "ERET 019 - Endgame";
-bm b7; id "ERET 036 - Endgame";
-bm exd5; id "ERET 038 - Endgame";
-bm Kb7; id "ERET 042 - Endgame";
-bm h4; id "ERET 044 - Open Line";
-bm cxd5; id "ERET 048 - Stong Squares";
-bm Bh6; id "ERET 051 - Defence";
-bm b4; id "ERET 052 - Stong Squares";
-bm d6; id "ERET 057 - Exchange";
-bm Qb6; id "ERET 065 - Zwischenzug";
-bm Kc4; id "ERET 074 - Endgame";
-bm g4; id "ERET 082 - Endgame";
-bm e5; id "ERET 105 - Stong Squares";
+bm Qd1+ ; id BK.01
+bm Nd5 a4; id BK.05
+bm Nf6; id BK.07
+bm Ne5; id BK.10
+bm Bf5; id BK.12
+bm Qd2 Qe1; id BK.14
+bm Qxg7+ ; id BK.15
+bm Ne4; id BK.16
+bm Rxe4; id BK.19
+bm g4; id BK.20
+bm Nh6; id BK.21
+bm Bxe4; id BK.22
