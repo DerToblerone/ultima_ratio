@@ -6,6 +6,7 @@
 /best_yet
 /notes
 /OLD
+/executables
 main
 urv2xp0000
 TODO
@@ -23,3 +24,5 @@ test_results
 output_zugzwang.txt
 output.txt
 test_results
+__Before TODO
+__ATODO

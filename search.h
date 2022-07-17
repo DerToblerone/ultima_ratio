@@ -101,6 +101,8 @@ Move search_position(Position& root_position, int min_depth){
 
         //OUTPUT:
 
+        if(pos.to_move == black) score = -score;
+
         // When done, print the score and principal variation
         display_search_result(depth, score, node_count, duration.count());
 
@@ -142,6 +144,8 @@ Move search_position(Position& root_position, int min_depth){
 
 // Quiet Position evaluation
 inline int eval(){
+    //return 0;
+    
     int score = 0;
     for(int sq = 0; sq < 64; sq++){
         if(pos.board[sq]&black) score -= piece_square_tbl[64*pos.board[sq] + sq] << 2;
@@ -149,6 +153,7 @@ inline int eval(){
     }
     if(pos.to_move) return -score;
     else return score;
+    
 }
 
 //Quiescience Search
@@ -182,6 +187,8 @@ int qs_search(int alpha, int beta){
         undo = make_move(pos, move);
 
         score = -qs_search(-beta, -alpha);
+        //score += incremental_eval(pos, move);
+
         if(score == -illegal_position){
                 // If the move was illegal, just undo and search the next one
                 unmake_move(pos, undo);
@@ -276,6 +283,7 @@ int search(int alpha, int beta, int depth){
         assert(pos.piece_bitboards[b_king] != 0ULL);
 
         score = -search(-beta, -alpha, depth - 1);
+        //score += incremental_eval(pos, move);
 
         if(score == -illegal_position){
                 // If the move was illegal, just undo and search the next one

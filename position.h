@@ -124,6 +124,8 @@ class Position{
 
         std::array<Piece, 64> board;
 
+        //std::array<uint64_t, __
+
         Square en_passant;
         
         uint8_t to_move;
@@ -414,6 +416,7 @@ std::string output_fen(const Position& pos){
 
     return output;
 }
+
 
 
 // INFORMATION BITBOARDS
@@ -747,5 +750,72 @@ bool Position::is_pseudolegal(Move move){
     return false;
 }
 
+
+// Place, move and remove piece from bitboards
+// NOTE: the array is still seperately handled
+
+// White
+
+inline void move_piece(Position& pos, Square from, Square to, uint8_t pce)
+{
+    pos.piece_bitboards[pce] ^= (1ULL << from) | (1ULL << to);
+}
+
+inline void place_piece(Position& pos, Square sq, uint8_t pce)
+{
+    pos.piece_bitboards[pce] ^= 1ULL << (sq);
+}
+
+// Same as place but for readability
+inline void remove_piece(Position& pos, Square sq, uint8_t pce)
+{
+    pos.piece_bitboards[pce] ^= 1ULL << (sq);  
+}
+
+/*
+template <Colors side, typename std::enable_if <side == white> :: type* = nullptr> 
+inline void place_piece(Position& pos, Square sq, Piece pce)
+{
+    pos.piece_bitboards[no_piece] ^= 1ULL << (sq);
+    pos.piece_bitboards[pce] ^= 1ULL << (sq);
+    pos.piece_bitboards[w_piece] ^= 1ULL << (sq);   
+}
+
+// The same exact functions as above, but it makes the code more readable
+template <Colors side, typename std::enable_if <side == white> :: type* = nullptr> 
+inline void remove_piece(Position& pos, Square sq, Piece pce)
+{
+    pos.piece_bitboards[no_piece] ^= 1ULL << (sq);
+    pos.piece_bitboards[pce] ^= 1ULL << (sq);
+    pos.piece_bitboards[w_piece] ^= 1ULL << (sq);   
+}
+
+// Black
+
+template <Colors side, typename std::enable_if <side == black> :: type* = nullptr> 
+inline void move_piece(Position& pos, Square from, Square to, Piece pce)
+{
+    pos.piece_bitboards[no_piece] ^= (1ULL << from) | (1ULL << to);
+    pos.piece_bitboards[pce] ^= (1ULL << from) | (1ULL << to);
+    pos.piece_bitboards[b_piece] ^= (1ULL << from) | (1ULL << to);  
+}
+
+template <Colors side, typename std::enable_if <side == black> :: type* = nullptr> 
+inline void place_piece(Position& pos, Square sq, Piece pce)
+{
+    pos.piece_bitboards[no_piece] ^= 1ULL << (sq);
+    pos.piece_bitboards[pce] ^= 1ULL << (sq);
+    pos.piece_bitboards[b_piece] ^= 1ULL << (sq);    
+}
+
+template <Colors side, typename std::enable_if <side == black> :: type* = nullptr> 
+inline void remove_piece(Position& pos, Square sq, Piece pce)
+{
+    pos.piece_bitboards[no_piece] ^= 1ULL << (sq);
+    pos.piece_bitboards[pce] ^= 1ULL << (sq);
+    pos.piece_bitboards[b_piece] ^= 1ULL << (sq);    
+}
+
+*/
 
 #endif //POSITION_H

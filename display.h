@@ -32,12 +32,17 @@ void print_bb(Bitboard bb){
 }
 
 void print_position(const Position& pos){
+    std::string pieces = " ♟♞♝♜♛♚  ♙♘♗♖♕♔";
     Bitboard mask;
     std::cout << "  |Version2=========|" << std::endl;
 
     for(int j = 7; j >= 0; j--){
         std::cout << j+1 << " | ";
         for(int i = 0; i < 8; i++){
+                
+            //if(((i%2) + (j%2))%2) std::cout << "\u001b[47;1m";
+            //else std::cout << "\u001b[42;1m";
+
             mask = 1;
             mask = mask << (i + (j*8));
             if(pos.piece_bitboards[b_pawn]&mask)        {std::cout << "♙ ";}
@@ -54,9 +59,9 @@ void print_position(const Position& pos){
             else if( pos.piece_bitboards[w_queen]&mask) {std::cout << "♛ ";}
             else if(((i%2) + (j%2))%2){std::cout << "██";}
             else {std::cout << "  ";}
-    
+            
         }
-
+        std::cout << "\u001b[0m";
         
         std::cout << "|";
         if(j == 6) std::cout << "  Castling Rights: " << castle_rights_str(pos);

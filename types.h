@@ -49,6 +49,7 @@ typedef uint16_t Move;
 typedef uint16_t Score;
 typedef uint8_t Square;
 typedef uint8_t PieceColor;
+typedef uint8_t Piece; // new
 
 constexpr uint16_t is_special_pawn_move = 0x7000;
 
@@ -70,8 +71,9 @@ enum Colors
 };
 
 // This is also the mapping of the Bitboards
-// Piece&type_mask = Piece
-enum Piece
+// PieceBitboards&type_mask = PieceType
+// Piece
+enum PieceBitboards
 {
     no_piece = 0,
     w_pawn = 1,
@@ -230,6 +232,12 @@ enum SpecialScores{
 
 constexpr uint8_t entry_flag_mask = 0b11000000;
 constexpr uint8_t entry_dep_mask  =   0b111111;
+/*
+enum DataOffsets{
+    score_data_offset = 32,
+    move_data_offset = 16,
+    info_data_offset = 0
+};*/
 
 enum EntryFlags{
     const_entry = 0xC0,
@@ -241,6 +249,8 @@ enum EntryFlags{
 
 struct TableEntry{
     uint64_t validation_key;
+
+    //uint64_t data;
     Move move;
     int32_t score;
     uint8_t info;
@@ -248,10 +258,11 @@ struct TableEntry{
     // Top 2 bits are flags
     // Bottom 6 bits are depth (up to 63)
 
-    TableEntry() : validation_key(0), move(0), score(0), info(0) {}
+    TableEntry() : validation_key(0), /*data(0) {}*/ move(0), score(0), info(0) {}
     TableEntry(uint64_t v_key, Move m, int32_t sc, uint8_t nfo) : 
-        validation_key(v_key), move(m), score(sc), info(nfo) {}
-
+        validation_key(v_key) , move(m), score(sc), info(nfo) {}
+        //data = (move << move_data_offset) | (score<< score_data_offset) | (info << info_data_offset);
+        //}
 };
 
 #endif // TYPES_H

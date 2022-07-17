@@ -43,6 +43,7 @@ UndoObject make_move(Position& pos, Move move){
     {
     case 0:
         pos.en_passant = 0;
+        
         break;
     case 0x8000:
         // CASTLING
@@ -50,9 +51,11 @@ UndoObject make_move(Position& pos, Move move){
             if(to > from){ //kingside
                 pos.board[H1] = no_piece;
                 pos.board[F1] = w_rook;
-                pos.piece_bitboards[w_rook] ^= (1ULL << H1) | (1ULL << F1);
-                pos.piece_bitboards[no_piece] ^= (1ULL << H1) | (1ULL << F1);
-                pos.piece_bitboards[w_piece] ^= (1ULL << H1) | (1ULL << F1);
+
+                move_piece(pos, H1, F1, no_piece);
+                move_piece(pos, H1, F1, w_rook);
+                move_piece(pos, H1, F1, w_piece);
+
                 // Update the position key
                 pos.position_key ^= rnd_value_array[64*w_rook + H1] 
                                     ^ rnd_value_array[64*w_rook + F1];
@@ -60,9 +63,11 @@ UndoObject make_move(Position& pos, Move move){
             else{
                 pos.board[A1] = no_piece;
                 pos.board[D1] = w_rook;
-                pos.piece_bitboards[w_rook] ^= (1ULL << A1) | (1ULL << D1);
-                pos.piece_bitboards[no_piece] ^= (1ULL << A1) | (1ULL << D1);
-                pos.piece_bitboards[w_piece] ^= (1ULL << A1) | (1ULL << D1);
+
+                move_piece(pos, A1, D1, no_piece);
+                move_piece(pos, A1, D1, w_rook);
+                move_piece(pos, A1, D1, w_piece);
+
                 // Update the position key
                 pos.position_key ^= rnd_value_array[64*w_rook + A1] 
                                     ^ rnd_value_array[64*w_rook + D1];
@@ -73,9 +78,14 @@ UndoObject make_move(Position& pos, Move move){
             if(to > from){ //kingside
                 pos.board[H8] = no_piece;
                 pos.board[F8] = b_rook;
+                /*
                 pos.piece_bitboards[b_rook] ^= (1ULL << H8) | (1ULL << F8);
                 pos.piece_bitboards[no_piece] ^= (1ULL << H8) | (1ULL << F8);
                 pos.piece_bitboards[b_piece] ^= (1ULL << H8) | (1ULL << F8);
+                */
+                move_piece(pos, H8, F8, no_piece);
+                move_piece(pos, H8, F8, b_rook);
+                move_piece(pos, H8, F8, b_piece);
                 // Update the position key
                 pos.position_key ^= rnd_value_array[64*b_rook + H8] 
                                     ^ rnd_value_array[64*b_rook + F8];
@@ -83,9 +93,14 @@ UndoObject make_move(Position& pos, Move move){
             else{
                 pos.board[A8] = no_piece;
                 pos.board[D8] = b_rook;
+                /*
                 pos.piece_bitboards[b_rook] ^= (1ULL << A8) | (1ULL << D8);
                 pos.piece_bitboards[no_piece] ^= (1ULL << A8) | (1ULL << D8);
                 pos.piece_bitboards[b_piece] ^= (1ULL << A8) | (1ULL << D8);
+                */
+                move_piece(pos, A8, D8, no_piece);
+                move_piece(pos, A8, D8, b_rook);
+                move_piece(pos, A8, D8, b_piece);
                 // Update the position key
                 pos.position_key ^= rnd_value_array[64*b_rook + A8] 
                                     ^ rnd_value_array[64*b_rook + D8];
@@ -108,17 +123,21 @@ UndoObject make_move(Position& pos, Move move){
     case 0x2000:
         // EN PASSANT CAPTURE
         if(pos.to_move){
-            pos.piece_bitboards[w_pawn] ^= 1ULL << (to + 8);
-            pos.piece_bitboards[w_piece] ^= 1ULL << (to + 8);
-            pos.piece_bitboards[no_piece] ^= 1ULL << (to + 8);
+
+            remove_piece(pos, to + 8, no_piece);
+            remove_piece(pos, to + 8, w_pawn);
+            remove_piece(pos, to + 8, w_piece);
+
             pos.board[to + 8] = no_piece;
             // Update the positon key
             pos.position_key ^= rnd_value_array[64*w_pawn + to + 8];
         }
         else{
-            pos.piece_bitboards[b_pawn] ^= 1ULL << (to - 8);
-            pos.piece_bitboards[b_piece] ^= 1ULL << (to - 8);
-            pos.piece_bitboards[no_piece] ^= 1ULL << (to - 8);
+
+            remove_piece(pos, to - 8, no_piece);
+            remove_piece(pos, to - 8, b_pawn);
+            remove_piece(pos, to - 8, b_piece);
+
             pos.board[to - 8] = no_piece;
             // Update the position key
             pos.position_key ^= rnd_value_array[64*b_pawn + to + 8];
@@ -127,9 +146,11 @@ UndoObject make_move(Position& pos, Move move){
         break;
     case 0x3000: 
         // PROMOTE TO KNIGHT
-        pos.board[to] = static_cast<Piece>(pos.board[to] + 1); // Pawn to knight
-        pos.piece_bitboards[moved + 1] ^= (1ULL << to);
-        pos.piece_bitboards[moved] ^= (1ULL << to);
+        pos.board[to] = pos.board[to] + 1; // Pawn to knight
+
+        place_piece(pos, to, moved +1);
+        remove_piece(pos, to, moved);
+
         pos.en_passant = 0;
         // Update the positon key
         pos.position_key ^= rnd_value_array[64*(moved + 1) + to]
@@ -137,9 +158,11 @@ UndoObject make_move(Position& pos, Move move){
         break;
     case 0x4000:
         // PROMOTE TO BISHOP
-        pos.board[to] = static_cast<Piece>(pos.board[to] + 2); // Pawn to bishop
-        pos.piece_bitboards[moved + 2] ^= (1ULL << to);
-        pos.piece_bitboards[moved] ^= (1ULL << to);
+        pos.board[to] = pos.board[to] + 2; // Pawn to bishop
+
+        place_piece(pos, to, moved +2);
+        remove_piece(pos, to, moved);
+
         pos.en_passant = 0;
         // Update the positon key
         pos.position_key ^= rnd_value_array[64*(moved + 2) + to]
@@ -147,9 +170,11 @@ UndoObject make_move(Position& pos, Move move){
         break;
     case 0x5000:
         // PROMOTE TO ROOK
-        pos.board[to] = static_cast<Piece>(pos.board[to] + 3); // Pawn to rook
-        pos.piece_bitboards[moved + 3] ^= (1ULL << to);
-        pos.piece_bitboards[moved] ^= (1ULL << to);
+        pos.board[to] = pos.board[to] + 3; // Pawn to rook
+
+        place_piece(pos, to, moved +3);
+        remove_piece(pos, to, moved);
+
         pos.en_passant = 0;
         // Update the positon key
         pos.position_key ^= rnd_value_array[64*(moved + 3) + to]
@@ -157,9 +182,11 @@ UndoObject make_move(Position& pos, Move move){
         break;
     case 0x6000:
         // PROMOTE TO QUEEN
-        pos.board[to] = static_cast<Piece>(pos.board[to] + 4); // Pawn to queen
-        pos.piece_bitboards[moved + 4] ^= (1ULL << to);
-        pos.piece_bitboards[moved] ^= (1ULL << to);
+        pos.board[to] = pos.board[to] + 4; // Pawn to queen
+
+        place_piece(pos, to, moved +4);
+        remove_piece(pos, to, moved);
+
         pos.en_passant = 0;
         // Update the positon key
         pos.position_key ^= rnd_value_array[64*(moved + 4) + to]
@@ -171,16 +198,17 @@ UndoObject make_move(Position& pos, Move move){
     }
 
     // Then change the bitboards
-    pos.piece_bitboards[moved] ^= (1ULL << from) | (1ULL << to);
-    pos.piece_bitboards[target] ^= (1ULL << to);
-    pos.piece_bitboards[no_piece] ^= (1ULL << from);
+    place_piece (pos, from,     no_piece);
+    remove_piece(pos,       to, target  );
+    move_piece  (pos, from, to, moved   );
+    
 
     // Occupancy bitboards need updating
-    pos.piece_bitboards[w_piece | pos.to_move] ^= (1ULL << from) | (1ULL << to);
+    move_piece(pos, from, to, w_piece | pos.to_move);
 
     // If there was a piece captured, change the opposing colors occpuancy
     if(target){
-        pos.piece_bitboards[b_piece ^ pos.to_move] ^= (1ULL << to);
+        remove_piece(pos, to, b_piece ^ pos.to_move);
     }
 
     // Update Castling rights
@@ -234,69 +262,77 @@ void unmake_move(Position& pos, const UndoObject& undo){
                 //basically an additional rook move has to be made, but it is always the same one
                 pos.board[F1] = no_piece;
                 pos.board[H1] = w_rook;
-                pos.piece_bitboards[w_rook] ^= (1ULL << H1) | (1ULL << F1);
-                pos.piece_bitboards[no_piece] ^= (1ULL << H1) | (1ULL << F1);
-                pos.piece_bitboards[w_piece] ^= (1ULL << H1) | (1ULL << F1);
+
+                move_piece(pos, H1, F1, no_piece);
+                move_piece(pos, H1, F1, w_rook);
+                move_piece(pos, H1, F1, w_piece);
             }
             else{
                 pos.board[D1] = no_piece;
                 pos.board[A1] = w_rook;
-                pos.piece_bitboards[w_rook] ^= (1ULL << A1) | (1ULL << D1);
-                pos.piece_bitboards[no_piece] ^= (1ULL << A1) | (1ULL << D1);
-                pos.piece_bitboards[w_piece] ^= (1ULL << A1) | (1ULL << D1);
+
+                move_piece(pos, A1, D1, no_piece);
+                move_piece(pos, A1, D1, w_rook);
+                move_piece(pos, A1, D1, w_piece);
             }
         }
         else{ //black
             if(to > from){ //kingside
                 pos.board[F8] = no_piece;
                 pos.board[H8] = b_rook;
-                pos.piece_bitboards[b_rook] ^= (1ULL << H8) | (1ULL << F8);
-                pos.piece_bitboards[no_piece] ^= (1ULL << H8) | (1ULL << F8);
-                pos.piece_bitboards[b_piece] ^= (1ULL << H8) | (1ULL << F8);
+
+                move_piece(pos, H8, F8, no_piece);
+                move_piece(pos, H8, F8, b_rook);
+                move_piece(pos, H8, F8, b_piece);
             }
             else{
                 pos.board[D8] = no_piece;
                 pos.board[A8] = b_rook;
-                pos.piece_bitboards[b_rook] ^= (1ULL << A8) | (1ULL << D8);
-                pos.piece_bitboards[no_piece] ^= (1ULL << A8) | (1ULL << D8);
-                pos.piece_bitboards[b_piece] ^= (1ULL << A8) | (1ULL << D8);
+
+                move_piece(pos, A8, D8, no_piece);
+                move_piece(pos, A8, D8, b_rook);
+                move_piece(pos, A8, D8, b_piece);
             }
         }
         break;
     case 0x2000:
         // EN PASSANT CAPTURE
         if(pos.to_move){
-            pos.piece_bitboards[w_pawn] ^= 1ULL << (to + 8);
-            pos.piece_bitboards[w_piece] ^= 1ULL << (to + 8);
-            pos.piece_bitboards[no_piece] ^= 1ULL << (to + 8);
+
+            place_piece(pos, to + 8, no_piece);
+            place_piece(pos, to + 8, w_pawn);
+            place_piece(pos, to + 8, w_piece);
+
             pos.board[to + 8] = w_pawn;
         }
         else{
-            pos.piece_bitboards[b_pawn] ^= 1ULL << (to - 8);
-            pos.piece_bitboards[b_piece] ^= 1ULL << (to - 8);
-            pos.piece_bitboards[no_piece] ^= 1ULL << (to - 8);
+
+            place_piece(pos, to - 8, no_piece);
+            place_piece(pos, to - 8, b_pawn);
+            place_piece(pos, to - 8, b_piece);
+
             pos.board[to - 8] = b_pawn;
         }
         break;
     case 0x3000:
         // PROMOTE TO KNIGHT
-        pos.piece_bitboards[undo.moved_piece + 1] ^= (1ULL << to); //remove the knight
-        pos.piece_bitboards[undo.moved_piece] ^= (1ULL << to); //put a pawn there instead
+        place_piece(pos, to, undo.moved_piece + 1);
+        remove_piece(pos, to, undo.moved_piece);
         break;
     case 0x4000:
         // PROMOTE TO BISHOP
-        pos.piece_bitboards[undo.moved_piece + 2] ^= (1ULL << to); 
-        pos.piece_bitboards[undo.moved_piece] ^= (1ULL << to);
+        place_piece(pos, to, undo.moved_piece + 2);
+        remove_piece(pos, to, undo.moved_piece);
         break;
     case 0x5000:
         // PROMOTE TO ROOK
-        pos.piece_bitboards[undo.moved_piece + 3] ^= (1ULL << to); 
-        pos.piece_bitboards[undo.moved_piece] ^= (1ULL << to);
+        place_piece(pos, to, undo.moved_piece + 3);
+        remove_piece(pos, to, undo.moved_piece);
         break;
     case 0x6000:
         // PROMOTE TO QUEEN
-        pos.piece_bitboards[undo.moved_piece + 4] ^= (1ULL << to); 
-        pos.piece_bitboards[undo.moved_piece] ^= (1ULL << to);
+        place_piece(pos, to, undo.moved_piece + 4);
+        remove_piece(pos, to, undo.moved_piece);
         break;
     default:
         break;
@@ -307,16 +343,18 @@ void unmake_move(Position& pos, const UndoObject& undo){
     pos.board[to] = undo.target_piece;
 
     // Undo changes to the bitboards
-    pos.piece_bitboards[undo.moved_piece] ^= (1ULL << from) | (1ULL << to);
-    pos.piece_bitboards[undo.target_piece] ^= (1ULL << to);
-    pos.piece_bitboards[no_piece] ^= (1ULL << from);
+    remove_piece(pos, from,          no_piece    );
+    place_piece (pos,       to, undo.target_piece);
+    move_piece  (pos, from, to, undo.moved_piece );
+    
+
 
     // After changing back the side to move, undo the occupancy changes    
-    pos.piece_bitboards[w_piece | pos.to_move] ^= (1ULL << from) | (1ULL << to);
+    move_piece(pos, from, to, w_piece | pos.to_move);
 
     // If there was a piece captured, change the opposing colors occpuancy back as well
     if(undo.target_piece){
-        pos.piece_bitboards[b_piece ^ pos.to_move] ^= (1ULL << to);
+        place_piece(pos, to, b_piece ^ pos.to_move);
     }
 
 }

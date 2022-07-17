@@ -367,4 +367,16 @@ std::array<uint8_t, 16> material_value = {
     0, // ...b_piece
 };
 
+/*
+inline int incremental_eval(const Position& pos, Move move){
+    Square from = move&0b111111;
+    Square to = (move >> 6)&0b111111;
+
+    // Target and moved pieces are saved here
+    Piece target = pos.board[to];
+    Piece moved = pos.board[from];
+    
+    return piece_square_tbl[target*64 + to] + piece_square_tbl[moved*64 + to] - piece_square_tbl[moved*64 + from];
+}*/
+
 #endif //TABLES_H
