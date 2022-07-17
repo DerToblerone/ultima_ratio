@@ -206,15 +206,19 @@ struct UndoObject
     Square en_passant_sq;
 
     uint8_t castling_rights;
-
+    
+    uint8_t halfmove_clock;
+    
     uint64_t position_key;
+    
 
-    UndoObject(Piece moved, Piece target, Move m, Square enp_sq, uint8_t cstl, uint64_t pos_key) : 
-                moved_piece(moved), 
+    UndoObject(Piece moved, Piece target, Move m, Square enp_sq, uint8_t cstl, uint8_t clock, uint64_t pos_key) : 
+                moved_piece(moved),
                 target_piece(target), 
                 move(m), 
                 en_passant_sq(enp_sq), 
                 castling_rights(cstl),
+                halfmove_clock(clock),
                 position_key(pos_key) {}
     
     UndoObject() {};

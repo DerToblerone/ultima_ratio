@@ -67,7 +67,8 @@ void print_position(const Position& pos){
         if(j == 6) std::cout << "  Castling Rights: " << castle_rights_str(pos);
         if(j == 5) std::cout << "  Key: " << std::hex << pos.position_key << std::dec;
         if(j == 4) std::cout <<  (pos.to_move ? "  Black" : "  White") << " to move"  << std::dec;
-        if((j == 3) && pos.en_passant) std::cout << "  En passant square: " << square_names[pos.en_passant];
+        if(j == 3) std::cout << "  Halfmove clock: " << static_cast<int>(pos.halfmove_clock);
+        if((j == 2) && pos.en_passant) std::cout << "  En passant square: " << square_names[pos.en_passant];
 
 
         std::cout << std::endl;

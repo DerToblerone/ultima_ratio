@@ -29,7 +29,11 @@ UndoObject make_move(Position& pos, Move move){
     Piece target = pos.board[to];
     Piece moved = pos.board[from];
 
-    UndoObject undo = UndoObject(moved, target, move, pos.en_passant, pos.castling_rights, pos.position_key);
+    UndoObject undo = UndoObject(moved, target, move, 
+                                pos.en_passant, 
+                                pos.castling_rights,
+                                pos.halfmove_clock, 
+                                pos.position_key);
 
     // Change the mailbox first, since this might need overwritng in case of promotions
     pos.board[to] = moved;
@@ -38,12 +42,13 @@ UndoObject make_move(Position& pos, Move move){
     // If there is an en_passant square, it will be removed from the key regardless what move is played
     if(pos.en_passant) pos.position_key ^= rnd_value_array[enp_rnd_id + pos.en_passant];
 
+    // pos.halfmove_clock = (((moved&type_mask) == pawn)) ? 0 : pos.halfmove_clock + 1;
+
     // Now handle special cases
     switch (move&0xF000)
     {
     case 0:
         pos.en_passant = 0;
-        
         break;
     case 0x8000:
         // CASTLING
@@ -208,8 +213,11 @@ UndoObject make_move(Position& pos, Move move){
 
     // If there was a piece captured, change the opposing colors occpuancy
     if(target){
+        pos.halfmove_clock = 0;
         remove_piece(pos, to, b_piece ^ pos.to_move);
     }
+    else if((moved&type_mask) == pawn) pos.halfmove_clock = 0;
+    else pos.halfmove_clock++;
 
     // Update Castling rights
     pos.castling_rights &= cstl_array[from]&cstl_array[to];
@@ -240,12 +248,15 @@ void unmake_move(Position& pos, const UndoObject& undo){
     Square from = undo.move&0b111111;
     Square to = (undo.move >> 6)&0b111111;
 
+    //Piece moved_piece = pos.board[to];
+
     // Change side to move back
     pos.to_move = black - pos.to_move;
 
     // load en passant state and castling rights
     pos.en_passant = undo.en_passant_sq;
     pos.castling_rights = undo.castling_rights;
+    pos.halfmove_clock = undo.halfmove_clock;
 
     // Recover key
     pos.position_key = undo.position_key;
@@ -316,23 +327,31 @@ void unmake_move(Position& pos, const UndoObject& undo){
         break;
     case 0x3000:
         // PROMOTE TO KNIGHT
-        place_piece(pos, to, undo.moved_piece + 1);
-        remove_piece(pos, to, undo.moved_piece);
+        remove_piece(pos, to, undo.moved_piece +1);
+        // moved_piece -= 1;
+        place_piece(pos, to, undo.moved_piece);
+
         break;
     case 0x4000:
         // PROMOTE TO BISHOP
-        place_piece(pos, to, undo.moved_piece + 2);
-        remove_piece(pos, to, undo.moved_piece);
+        remove_piece(pos, to, undo.moved_piece + 2);
+        //moved_piece -= 2;
+        place_piece(pos, to, undo.moved_piece);
+
         break;
     case 0x5000:
         // PROMOTE TO ROOK
-        place_piece(pos, to, undo.moved_piece + 3);
-        remove_piece(pos, to, undo.moved_piece);
+        remove_piece(pos, to, undo.moved_piece + 3);
+        //moved_piece -= 3;
+        place_piece(pos, to, undo.moved_piece);
+
         break;
     case 0x6000:
         // PROMOTE TO QUEEN
-        place_piece(pos, to, undo.moved_piece + 4);
-        remove_piece(pos, to, undo.moved_piece);
+        remove_piece(pos, to, undo.moved_piece + 4);
+        // moved_piece -= 4;
+        place_piece(pos, to, undo.moved_piece);
+
         break;
     default:
         break;

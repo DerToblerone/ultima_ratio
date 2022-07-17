@@ -107,6 +107,8 @@ class Position{
             // Bits, from left to right: qkQK
             castling_rights = 0b1111;
 
+            halfmove_clock = 0;
+
             // Initialize the position key
             init_position_key();
             
@@ -130,6 +132,7 @@ class Position{
         
         uint8_t to_move;
         uint8_t castling_rights;
+        uint8_t halfmove_clock;
 
         uint64_t position_key;
 
