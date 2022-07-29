@@ -10,7 +10,7 @@
 #include "types.h"
 
 // Hash table index length can be specified here
-constexpr short tbl_idx_len= 22;
+constexpr short tbl_idx_len = 22;
 constexpr short tbl_shift = 64 - tbl_idx_len;
 constexpr unsigned long tbl_size = 1UL << (tbl_idx_len + 1);
 

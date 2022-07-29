@@ -41,8 +41,6 @@ void start_game(){
     // Keeps track if the human player has played a move 
     bool engine_move;
 
-    std::array<UndoObject, 200> undo_stack = {UndoObject()};
-
     int depth;
     std::cout << "Search depth: " << std::endl;
     std::cin >> depth;
@@ -63,8 +61,8 @@ void start_game(){
 
         if(move_string.length() > 5) std::cout << "Input too long!" << std::endl;
         else if(move_string == "0"){
-            if(move_count){
-                unmake_move(pos, undo_stack[--move_count]);
+            if(pos.total_move_count){
+                unmake_move(pos);
                 print_position(pos);
             }
             else std::cout << "No move to undo!" << std::endl;
@@ -72,6 +70,7 @@ void start_game(){
         else if(move_string == "1") engine_move = true;
         else if(move_string == "save"){
             // Save the moves that have been played to text file
+            /*
             std::ofstream out_stream;
 
             out_stream.open("game.txt");
@@ -83,6 +82,7 @@ void start_game(){
                 }
             }
             out_stream.close();
+            */
         }
         else{
             player_move = parse_input_move(move_string);
@@ -124,10 +124,10 @@ void start_game(){
                             else continue;
                         }
 
-                        undo_stack[move_count++] = make_move(pos, move);
+                        make_move(pos, move);
                         
                         if(get_checkers(black - pos.to_move, pos)){
-                            unmake_move(pos, undo_stack[--move_count]);
+                            unmake_move(pos);
                             std::cout << "Illegal move!" << std::endl;
                             break;
                         }
@@ -142,7 +142,7 @@ void start_game(){
             std::cout << "Computer is thinking..." << std::endl;
             computer_move = search_position(pos, depth);
 
-            undo_stack[move_count++] = make_move(pos, computer_move);
+            make_move(pos, computer_move);
             print_position(pos);
 
         }

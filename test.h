@@ -238,9 +238,9 @@ std::string convert_to_algebraic(Move move, Position& pos, bool check_sign){
     }
 
     if(check_sign){
-        UndoObject undo = make_move(pos, move);
+        make_move(pos, move);
         if(get_checkers(pos.to_move, pos)) result += "+";
-        unmake_move(pos, undo);
+        unmake_move(pos);
     }
     
 

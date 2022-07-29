@@ -21,7 +21,7 @@ static constexpr std::array<uint8_t, 64> cstl_array = {
 };
 
 
-UndoObject make_move(Position& pos, Move move){
+bool make_move(Position& pos, Move move){
     Square from = move&0b111111;
     Square to = (move >> 6)&0b111111;
 
@@ -29,11 +29,14 @@ UndoObject make_move(Position& pos, Move move){
     Piece target = pos.board[to];
     Piece moved = pos.board[from];
 
+    /*
     UndoObject undo = UndoObject(moved, target, move, 
                                 pos.en_passant, 
                                 pos.castling_rights,
                                 pos.halfmove_clock, 
                                 pos.position_key);
+    */
+    pos.push_history(moved, target, move);
 
     // Change the mailbox first, since this might need overwritng in case of promotions
     pos.board[to] = moved;
@@ -231,6 +234,7 @@ UndoObject make_move(Position& pos, Move move){
                         ^ rnd_value_array[64*moved + to]
                         ^ rnd_value_array[64*target + to];
 
+    UndoObject undo = pos.get_last_history();
     if(undo.castling_rights ^ pos.castling_rights){
         // Remove castling rights from hash if they are different
         uint8_t cstl_difference = undo.castling_rights^pos.castling_rights;
@@ -241,10 +245,11 @@ UndoObject make_move(Position& pos, Move move){
     }
 
     // Return Undo instructions
-    return undo;
+    return true;
 }
 
-void unmake_move(Position& pos, const UndoObject& undo){
+void unmake_move(Position& pos){
+    UndoObject undo = pos.pop_history();
     Square from = undo.move&0b111111;
     Square to = (undo.move >> 6)&0b111111;
 

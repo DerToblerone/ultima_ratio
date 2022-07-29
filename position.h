@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string>
 #include <random>
+#include <algorithm>
 
 #include "types.h"
 #include "utility.h"
@@ -109,6 +110,9 @@ class Position{
 
             halfmove_clock = 0;
 
+            position_history = {UndoObject()};
+            total_move_count = 0;
+
             // Initialize the position key
             init_position_key();
             
@@ -136,9 +140,19 @@ class Position{
 
         uint64_t position_key;
 
+        std::array<UndoObject, max_game_length> position_history;
+        uint16_t total_move_count;
+
         void init_position_key();
 
         bool is_pseudolegal(Move move);
+
+        void push_history(Piece moved, Piece target, Move move);
+        UndoObject get_last_history();
+        UndoObject pop_history();
+
+        bool is_repetition();
+
 };
 
 void Position::init_position_key(){
@@ -774,6 +788,52 @@ inline void remove_piece(Position& pos, Square sq, uint8_t pce)
 {
     pos.piece_bitboards[pce] ^= 1ULL << (sq);  
 }
+
+inline void Position::push_history(Piece moved, Piece target, Move move)
+{
+    position_history[total_move_count++] = 
+                    UndoObject(moved, target, move, 
+                                en_passant, 
+                                castling_rights,
+                                halfmove_clock, 
+                                position_key);
+}
+
+inline UndoObject Position::get_last_history()
+{
+    return position_history[total_move_count - 1];
+}
+
+inline UndoObject Position::pop_history()
+{
+    return position_history[--total_move_count];
+}
+
+inline bool Position::is_repetition()
+{
+    // OPTION 1:
+    /*
+    return std::count_if(position_history.begin(), position_history.end(), [this](UndoObject obj){
+        return (obj.position_key == this->position_key);
+    });*/
+    /*
+    return (&position_history[total_move_count] 
+            != 
+            std::find(  position_history[total_move_count - halfmove_clock],
+                        position_history[total_move_count])());*/
+
+    // OPTION 2:
+    // only check starting at -4,
+    // only check every othe one
+    // stop checking after halfmove is done
+
+    for(char i = 2; i < (halfmove_clock/2); i++){
+        if(position_history[total_move_count - (2 << i)].position_key == position_key) return true;
+    }
+    return false;
+}
+
+
 
 /*
 template <Colors side, typename std::enable_if <side == white> :: type* = nullptr> 

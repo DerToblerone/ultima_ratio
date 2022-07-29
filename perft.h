@@ -173,12 +173,11 @@ unsigned long long do_perft(int depth, Position& pos, bool divide){
         if(move != 0){
             count = 0;
             
-            UndoObject undo = make_move(pos, move);
+            make_move(pos, move);
             
             count = perft(depth - 1, pos);
 
-
-            unmake_move(pos, undo);
+            unmake_move(pos);
 
             if(divide){
                 if(count) std::cout << square_names[from_square(move)] 
@@ -212,11 +211,11 @@ unsigned long long perft(int depth, Position& pos){
     
     for(Move move : move_list.move_stack){
         if(move != 0){
-            UndoObject undo = make_move(pos, move);
+            make_move(pos, move);
 
             count += perft(depth - 1, pos);
 
-            unmake_move(pos, undo);
+            unmake_move(pos);
 
         }
     } 

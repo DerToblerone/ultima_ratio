@@ -79,6 +79,15 @@ Move search_position(Position& root_position, int min_depth){
     prepare_tables(pos);
 
     clear_table();
+
+    for (int i = 0; i < pos.total_move_count; i++){
+        store_entry(pos.position_history[i].position_key,
+                    0,
+                    0,
+                    const_entry,
+                    47);
+    }
+
     std::cout   << "Table size: " << tbl_size*sizeof(TableEntry)/(1024.0f*1024.0f) << " Mb, " 
                 << tbl_size << " entries." << std::endl;
 
@@ -93,11 +102,91 @@ Move search_position(Position& root_position, int min_depth){
     
         auto start = std::chrono::high_resolution_clock::now();
         // Search for best move
-        score = search(-infinity_score, infinity_score, depth);
+        //score = search(-infinity_score, infinity_score, depth);
+
+        MovePicker move_picker(pos);
+
+        TableEntry table_entry = probe_table(pos.position_key);
+        if(table_entry.info != 0){
+            if(pos.is_pseudolegal(table_entry.move)) {
+                move_picker.add_move(table_entry.move);
+            }
+        }
+
+        Move move = move_picker.pick_next_move();
+        best_move = 0;
+
+
+        short moves_played = 0;
+
+
+        int best_score = -infinity_score;
+
+        score = 0;
+
+        while(move){;
+
+            make_move(pos, move);
+
+            score = -search(-infinity_score, -best_score, depth - 1);
+            //score += incremental_eval(pos, move);
+
+            if(score == -illegal_position){
+                    // If the move was illegal, just undo and search the next one
+                    unmake_move(pos);
+                    move = move_picker.pick_next_move();
+                    continue;
+                }
+
+            unmake_move(pos);
+
+            moves_played++;
+
+
+            // If a score surpasses alpha, a new best move is found.
+            if(score > best_score){
+
+                best_score = score;
+
+                principal_variation[max_pv_len*depth] = best_move = move;
+                
+                
+                std::copy_n(  &principal_variation[(max_pv_len*(depth - 1))],
+                            depth-1,
+                            &principal_variation[(max_pv_len*depth) + 1]);
+            
+
+            }
+
+            move = move_picker.pick_next_move();
+
+        }
+        if(moves_played == 0){
+            if(get_checkers(pos.to_move, pos))  best_score = -(checkmate_score + depth);
+            else                                best_score = stalemate_score;
+            done = true;
+        }
+
+        store_entry(pos.position_key, best_move, best_score, exact_score, depth);
+
+
+
 
         auto stop = std::chrono::high_resolution_clock::now();
 
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+        
+
+        // Update values:
+        total_nodes += node_count;
+
+        //best_move = principal_variation[max_pv_len*depth];
+
+        if(moves_played == 1) done = true; // FIS SCORE (USE LAST SCORE)
+
+        // If a checkmate is found for the side to move, stop search and play
+        if(score >= checkmate_score) done = true;
 
         //OUTPUT:
 
@@ -105,19 +194,9 @@ Move search_position(Position& root_position, int min_depth){
 
         // When done, print the score and principal variation
         display_search_result(depth, score, node_count, duration.count());
-
-        // Update values:
-        total_nodes += node_count;
-
-        best_move = principal_variation[max_pv_len*depth];
-
-
-        // If a checkmate is found for the side to move, stop search and play
-        if(score >= checkmate_score) done = true;
-
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - full_start);
-        if((depth >= min_depth) && ((duration.count()/1000.0f) > 2)) done = true;
         
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - full_start);
+        if((depth >= min_depth) && ((duration.count()/1000.0f) > 1.2f)) done = true;
         
         depth++;
 
@@ -144,13 +223,13 @@ Move search_position(Position& root_position, int min_depth){
 
 // Quiet Position evaluation
 inline int eval(){
-    //return 0;
-    
+
     int score = 0;
     for(int sq = 0; sq < 64; sq++){
         if(pos.board[sq]&black) score -= piece_square_tbl[64*pos.board[sq] + sq] << 2;
         else score += piece_square_tbl[64*pos.board[sq] + sq] << 2;
     }
+
     if(pos.to_move) return -score;
     else return score;
     
@@ -174,7 +253,6 @@ int qs_search(int alpha, int beta){
     Move move = move_picker.pick_next_move();
 
     int score;
-    UndoObject undo;
 
     while(move){
         // Do not look at pawn captures.
@@ -184,19 +262,19 @@ int qs_search(int alpha, int beta){
         if(pos.board[to_square(move)] == b_pawn) return alpha;
 
         // Actual QS
-        undo = make_move(pos, move);
+        make_move(pos, move);
 
         score = -qs_search(-beta, -alpha);
         //score += incremental_eval(pos, move);
 
         if(score == -illegal_position){
                 // If the move was illegal, just undo and search the next one
-                unmake_move(pos, undo);
+                unmake_move(pos);
                 move = move_picker.pick_next_move();
                 continue;
             }
 
-        unmake_move(pos, undo);
+        unmake_move(pos);
 
         move = move_picker.pick_next_move();
 
@@ -221,14 +299,22 @@ int qs_search(int alpha, int beta){
 
 // Main Search
 int search(int alpha, int beta, int depth){
-
-    if (depth == 0) return qs_search(alpha,beta);
+    
+    
+    if (depth == 0){
+        
+        return qs_search(alpha,beta);
+    } 
     
     if(get_checkers(black ^ pos.to_move, pos)){
         // This position is illegal
         return illegal_position;
     }
+
     
+    // if(pos.is_repetition()) return 0;// Score position as draw if it repeats
+    if(pos.halfmove_clock >= 50) return 0; 
+
     node_count++;
 
     MovePicker move_picker(pos);
@@ -256,7 +342,8 @@ int search(int alpha, int beta, int depth){
                 else if(table_entry.score <= alpha) return alpha;
                 else return table_entry.score;
                 break;
-
+            case const_entry:
+                return table_entry.score;
             default:
                 break;
             }
@@ -269,15 +356,13 @@ int search(int alpha, int beta, int depth){
 
     short moves_played = 0;
 
-    UndoObject undo;
-
     EntryFlags flag = upper_bound;
 
     int score;
 
     while(move){;
 
-        undo = make_move(pos, move);
+        make_move(pos, move);
 
         assert(pos.piece_bitboards[w_king] != 0ULL);
         assert(pos.piece_bitboards[b_king] != 0ULL);
@@ -287,12 +372,12 @@ int search(int alpha, int beta, int depth){
 
         if(score == -illegal_position){
                 // If the move was illegal, just undo and search the next one
-                unmake_move(pos, undo);
+                unmake_move(pos);
                 move = move_picker.pick_next_move();
                 continue;
             }
 
-        unmake_move(pos, undo);
+        unmake_move(pos);
 
         moves_played++;
 

@@ -40,6 +40,8 @@
 #define cstl_move_Q 0x8084
 #define cstl_move_K 0x8184
 
+#define max_game_length 512
+
 
 
 
@@ -50,6 +52,7 @@ typedef uint16_t Score;
 typedef uint8_t Square;
 typedef uint8_t PieceColor;
 typedef uint8_t Piece; // new
+typedef uint8_t EntryFlags;
 
 constexpr uint16_t is_special_pawn_move = 0x7000;
 
@@ -225,13 +228,16 @@ struct UndoObject
 };
 
 // SEARCH INFO AND TT
-enum SpecialScores{
+enum SpecialScore{
     illegal_position =  0xFFFFFFF,
     infinity_score =    0xFFFFFF,
     checkmate_score =   0xFFFFF,
     stalemate_score =   0,
+    draw_score = 0,
     mate_dep_margin = 200
 };
+
+constexpr uint8_t empty_move = 0;
 
 
 constexpr uint8_t entry_flag_mask = 0b11000000;
@@ -243,13 +249,15 @@ enum DataOffsets{
     info_data_offset = 0
 };*/
 
-enum EntryFlags{
+enum EntryFlagMacro{
     const_entry = 0xC0,
 
     upper_bound = 0x80,
     exact_score = 0x40,
     lower_bound = 0x00,
 };
+
+//constexpr int validation_mask = 0xFFFFFFFF;
 
 struct TableEntry{
     uint64_t validation_key;
